@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Final Test - All Metrics</title>
+    <style>
+        body {
+            background: #0a0e27;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #1a1f3a 0%, #161b35 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .metric-label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00ccff;
+            margin-bottom: 8px;
+        }
+        .metric-signal {
+            font-size: 14px;
+        }
+        .success { color: #00ff88; }
+        .warning { color: #ffcc00; }
+        .error { color: #ff4444; }
+        h1 { text-align: center; color: #f7931a; }
+    </style>
+</head>
+<body>
+    <h1>₿ Bitcoin On-Chain Intelligence - Live Test</h1>
+    
+    <div class="dashboard-grid">
+        <div class="metric-card">
+            <div class="metric-label">📊 MVRV Z-SCORE</div>
+            <div class="metric-value" id="mvrv-value">--</div>
+            <div class="metric-signal" id="mvrv-signal">Loading...</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-label">🏦 EXCHANGE FLOWS</div>
+            <div class="metric-value" id="flow-value">-- BTC</div>
+            <div class="metric-signal" id="flow-signal">Loading...</div>
+            <div style="margin-top: 10px; color: #666;" id="flow-trend">30d: --%</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-label">💎 LONG-TERM HOLDERS</div>
+            <div class="metric-value" id="lth-value">--%</div>
+            <div class="metric-signal" id="lth-signal">Loading...</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-label">⚡ NETWORK HEALTH</div>
+            <div class="metric-value" id="health-value">--/100</div>
+            <div class="metric-signal" id="health-signal">Loading...</div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px;">
+        <p id="status" style="color: #888;">Fetching real on-chain data...</p>
+        <p id="source" style="color: #666; font-size: 12px;"></p>
+    </div>
+
+    <script>
+        async function updateDashboard() {
+            try {
+                const response = await fetch('http://localhost:8000/api/onchain');
+                const data = await response.json();
+                
+                // Update MVRV
+                if (data.mvrv) {
+                    document.getElementById('mvrv-value').textContent = data.mvrv.z_score.toFixed(2);
+                    const mvrvSignal = document.getElementById('mvrv-signal');
+                    mvrvSignal.textContent = data.mvrv.signal;
+                    mvrvSignal.style.color = data.mvrv.color;
+                }
+                
+                // Update Exchange Flows
+                if (data.exchange_flows) {
+                    const flow = data.exchange_flows.net_flow_24h;
+                    document.getElementById('flow-value').textContent = 
+                        `${flow > 0 ? '+' : ''}${flow.toFixed(0)} BTC`;
+                    
+                    const flowSignal = document.getElementById('flow-signal');
+                    flowSignal.textContent = data.exchange_flows.signal;
+                    flowSignal.style.color = data.exchange_flows.color;
+                    
+                    const trend = data.exchange_flows.trend_30d_pct || 0;
+                    document.getElementById('flow-trend').textContent = 
+                        `30d: ${trend > 0 ? '+' : ''}${trend.toFixed(1)}%`;
+                }
+                
+                // Update LTH
+                if (data.lth_supply) {
+                    document.getElementById('lth-value').textContent = 
+                        `${data.lth_supply.lth_percentage}%`;
+                    
+                    const lthSignal = document.getElementById('lth-signal');
+                    lthSignal.textContent = data.lth_supply.signal;
+                    lthSignal.style.color = data.lth_supply.color;
+                }
+                
+                // Update Network Health
+                if (data.network_health) {
+                    document.getElementById('health-value').textContent = 
+                        `${data.network_health.health_score.toFixed(0)}/100`;
+                    
+                    const healthSignal = document.getElementById('health-signal');
+                    healthSignal.textContent = data.network_health.status;
+                    healthSignal.style.color = data.network_health.color;
+                }
+                
+                // Update status
+                if (data.is_real_data) {
+                    document.getElementById('status').innerHTML = 
+                        '<span class="success">✅ All metrics updated with REAL blockchain data</span>';
+                    document.getElementById('source').textContent = 
+                        `Data source: ${data.data_sources.join(', ')} | Confidence: ${(data.confidence * 100).toFixed(0)}%`;
+                }
+                
+            } catch (error) {
+                document.getElementById('status').innerHTML = 
+                    `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        // Initial load
+        updateDashboard();
+        
+        // Refresh every 30 seconds
+        setInterval(updateDashboard, 30000);
+    </script>
+</body>
+</html>

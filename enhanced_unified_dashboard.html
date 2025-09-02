@@ -1831,28 +1831,37 @@
                     const flowText = document.getElementById('flowText');
                     const exchangeTrend = document.getElementById('exchangeTrend');
                     
-                    const flow = data.exchange_flows.net_flow_24h;
-                    flowValue.textContent = `${flow > 0 ? '+' : ''}${flow.toFixed(0)} BTC`;
-                    flowSignal.textContent = data.exchange_flows.signal;
-                    flowSignal.style.color = data.exchange_flows.color;
+                    const flow = data.exchange_flows.net_flow_24h || 0;
                     
-                    // Update arrow direction
-                    if (flow > 50) {
-                        flowDirection.textContent = '⬆️';  // Inflow
-                        flowText.textContent = 'Inflow (Bearish)';
-                        flowText.style.color = '#ff6600';
-                    } else if (flow < -50) {
-                        flowDirection.textContent = '⬇️';  // Outflow
-                        flowText.textContent = 'Outflow (Bullish)';
-                        flowText.style.color = '#00ff88';
-                    } else {
-                        flowDirection.textContent = '➡️';  // Neutral
-                        flowText.textContent = 'Neutral';
-                        flowText.style.color = '#ffcc00';
+                    if (flowValue) {
+                        flowValue.textContent = `${flow > 0 ? '+' : ''}${flow.toFixed(0)} BTC`;
+                    }
+                    if (flowSignal) {
+                        flowSignal.textContent = data.exchange_flows.signal || 'Balanced Flow';
+                        flowSignal.style.color = data.exchange_flows.color || '#ffcc00';
                     }
                     
-                    const trend = data.exchange_flows.trend_30d_pct;
-                    exchangeTrend.textContent = `30d: ${trend > 0 ? '+' : ''}${trend.toFixed(1)}%`;
+                    // Update arrow direction
+                    if (flowDirection && flowText) {
+                        if (flow > 50) {
+                            flowDirection.textContent = '⬆️';  // Inflow
+                            flowText.textContent = 'Inflow (Bearish)';
+                            flowText.style.color = '#ff6600';
+                        } else if (flow < -50) {
+                            flowDirection.textContent = '⬇️';  // Outflow
+                            flowText.textContent = 'Outflow (Bullish)';
+                            flowText.style.color = '#00ff88';
+                        } else {
+                            flowDirection.textContent = '➡️';  // Neutral
+                            flowText.textContent = 'Neutral';
+                            flowText.style.color = '#ffcc00';
+                        }
+                    }
+                    
+                    if (exchangeTrend) {
+                        const trend = data.exchange_flows.trend_30d_pct || 0;
+                        exchangeTrend.textContent = `30d: ${trend > 0 ? '+' : ''}${trend.toFixed(1)}%`;
+                    }
                 }
                 
                 // Update LTH Supply

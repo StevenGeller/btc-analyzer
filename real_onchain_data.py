@@ -142,6 +142,7 @@ class RealOnChainData:
                 'color': color,
                 'large_transactions': large_tx_count,
                 'exchange_balance_total': round(total_exchange_balance, 2),
+                'trend_30d_pct': 0,  # Would require historical data
                 'data_source': 'blockchain.info',
                 'description': f"{abs(estimated_flow):.0f} BTC {flow_direction.lower()} (est.)"
             }
