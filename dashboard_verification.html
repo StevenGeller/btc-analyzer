@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Complete Verification</title>
+    <style>
+        body {
+            background: #0a0e27;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #f7931a;
+            margin: 0;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .section {
+            background: linear-gradient(135deg, #1a1f3a, #161b35);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .section-title {
+            color: #f7931a;
+            font-size: 14px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .metric:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            color: #888;
+            font-size: 12px;
+        }
+        .metric-value {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .green { color: #00ff88; }
+        .red { color: #ff4444; }
+        .yellow { color: #ffcc00; }
+        .blue { color: #00ccff; }
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0,255,136,0.1);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+        }
+        .error {
+            background: rgba(255,68,68,0.1);
+            border-color: #ff4444;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>₿ Bitcoin Dashboard - Complete Data Verification</h1>
+        <p style="color: #666;">All Real-Time Data | No Buy/Sell - Color Zones Only</p>
+    </div>
+
+    <div class="grid">
+        <!-- Price & Market Data -->
+        <div class="section">
+            <div class="section-title">📊 MARKET DATA</div>
+            <div class="metric">
+                <span class="metric-label">BTC Price</span>
+                <span class="metric-value blue" id="btc-price">Loading...</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">24h Change</span>
+                <span class="metric-value" id="price-change">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Market State</span>
+                <span class="metric-value" id="market-state">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Fear & Greed</span>
+                <span class="metric-value" id="fear-greed">--</span>
+            </div>
+        </div>
+
+        <!-- Power Law -->
+        <div class="section">
+            <div class="section-title">📈 POWER LAW MODEL</div>
+            <div class="metric">
+                <span class="metric-label">Fair Value</span>
+                <span class="metric-value" id="fair-value">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Deviation</span>
+                <span class="metric-value" id="pl-deviation">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Zone</span>
+                <span class="metric-value" id="pl-zone">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Position</span>
+                <span class="metric-value" id="pl-position">--</span>
+            </div>
+        </div>
+
+        <!-- On-Chain: MVRV -->
+        <div class="section">
+            <div class="section-title">📊 MVRV Z-SCORE</div>
+            <div class="metric">
+                <span class="metric-label">Z-Score</span>
+                <span class="metric-value" id="mvrv-score">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value" id="mvrv-signal">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Market Cap</span>
+                <span class="metric-value" id="market-cap">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Realized Cap</span>
+                <span class="metric-value" id="realized-cap">--</span>
+            </div>
+        </div>
+
+        <!-- Exchange Flows -->
+        <div class="section">
+            <div class="section-title">🏦 EXCHANGE FLOWS</div>
+            <div class="metric">
+                <span class="metric-label">24h Net Flow</span>
+                <span class="metric-value" id="net-flow">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Direction</span>
+                <span class="metric-value" id="flow-direction">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value" id="flow-signal">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Large Txs</span>
+                <span class="metric-value" id="large-txs">--</span>
+            </div>
+        </div>
+
+        <!-- LTH Supply -->
+        <div class="section">
+            <div class="section-title">💎 LONG-TERM HOLDERS</div>
+            <div class="metric">
+                <span class="metric-label">LTH %</span>
+                <span class="metric-value" id="lth-percent">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">HODL Strength</span>
+                <span class="metric-value" id="hodl-strength">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value" id="lth-signal">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Supply BTC</span>
+                <span class="metric-value" id="lth-supply">--</span>
+            </div>
+        </div>
+
+        <!-- Network Health -->
+        <div class="section">
+            <div class="section-title">⚡ NETWORK HEALTH</div>
+            <div class="metric">
+                <span class="metric-label">Health Score</span>
+                <span class="metric-value" id="health-score">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Status</span>
+                <span class="metric-value" id="health-status">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Hash Rate</span>
+                <span class="metric-value" id="hash-rate">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Daily Txs</span>
+                <span class="metric-value" id="daily-txs">--</span>
+            </div>
+        </div>
+
+        <!-- Multi-Asset: MSTR -->
+        <div class="section">
+            <div class="section-title">💼 MICROSTRATEGY</div>
+            <div class="metric">
+                <span class="metric-label">NAV Premium</span>
+                <span class="metric-value" id="mstr-premium">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Stock Price</span>
+                <span class="metric-value" id="mstr-price">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Beta to BTC</span>
+                <span class="metric-value" id="mstr-beta">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value" id="mstr-signal">--</span>
+            </div>
+        </div>
+
+        <!-- ETH/BTC -->
+        <div class="section">
+            <div class="section-title">Ξ ETHEREUM</div>
+            <div class="metric">
+                <span class="metric-label">ETH/BTC Ratio</span>
+                <span class="metric-value" id="eth-ratio">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">ETH Price</span>
+                <span class="metric-value" id="eth-price">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Trend</span>
+                <span class="metric-value" id="eth-trend">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value" id="eth-signal">--</span>
+            </div>
+        </div>
+
+        <!-- SOL/BTC -->
+        <div class="section">
+            <div class="section-title">◎ SOLANA</div>
+            <div class="metric">
+                <span class="metric-label">SOL/BTC Ratio</span>
+                <span class="metric-value" id="sol-ratio">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">SOL Price</span>
+                <span class="metric-value" id="sol-price">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">24h Change</span>
+                <span class="metric-value" id="sol-change">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Momentum</span>
+                <span class="metric-value" id="sol-momentum">--</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="status" id="status">
+        <strong>Status:</strong> <span id="status-text">Connecting to data sources...</span>
+    </div>
+
+    <script>
+        async function loadAllData() {
+            const status = document.getElementById('status-text');
+            let errors = [];
+            
+            try {
+                // Load Market Analysis
+                const analysisRes = await fetch('/api/analysis');
+                const analysis = await analysisRes.json();
+                
+                document.getElementById('btc-price').textContent = `$${analysis.current_data?.price?.toLocaleString() || '--'}`;
+                const change = analysis.current_data?.price_change_24h || 0;
+                const changeEl = document.getElementById('price-change');
+                changeEl.textContent = `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
+                changeEl.className = `metric-value ${change > 0 ? 'green' : 'red'}`;
+                
+                const stateEl = document.getElementById('market-state');
+                stateEl.textContent = analysis.market_state?.state || '--';
+                stateEl.className = `metric-value ${analysis.market_state?.color === '#00ff00' ? 'green' : analysis.market_state?.color === '#ff0000' ? 'red' : 'yellow'}`;
+                
+                const fgi = analysis.fear_greed_index?.value || '--';
+                const fgiEl = document.getElementById('fear-greed');
+                fgiEl.textContent = `${fgi} - ${analysis.fear_greed_index?.classification || ''}`;
+                fgiEl.className = `metric-value ${fgi < 25 ? 'red' : fgi > 75 ? 'green' : 'yellow'}`;
+                
+                // Load Power Law
+                const plRes = await fetch('/api/power-law');
+                const powerLaw = await plRes.json();
+                
+                document.getElementById('fair-value').textContent = `$${powerLaw.current?.fair_value?.toLocaleString() || '--'}`;
+                const deviation = powerLaw.current?.deviation_percent || 0;
+                const devEl = document.getElementById('pl-deviation');
+                devEl.textContent = `${deviation > 0 ? '+' : ''}${deviation.toFixed(1)}%`;
+                devEl.className = `metric-value ${Math.abs(deviation) < 10 ? 'green' : Math.abs(deviation) < 30 ? 'yellow' : 'red'}`;
+                
+                const zoneEl = document.getElementById('pl-zone');
+                if (deviation < -10) {
+                    zoneEl.textContent = 'Green Zone';
+                    zoneEl.className = 'metric-value green';
+                } else if (deviation > 50) {
+                    zoneEl.textContent = 'Red Zone';
+                    zoneEl.className = 'metric-value red';
+                } else {
+                    zoneEl.textContent = 'Neutral Zone';
+                    zoneEl.className = 'metric-value yellow';
+                }
+                
+                document.getElementById('pl-position').textContent = `${(powerLaw.current?.position_in_band * 100 || 0).toFixed(0)}% in band`;
+                
+                // Load On-Chain Data
+                const onchainRes = await fetch('/api/onchain');
+                const onchain = await onchainRes.json();
+                
+                // MVRV
+                document.getElementById('mvrv-score').textContent = onchain.mvrv?.z_score?.toFixed(2) || '--';
+                const mvrvSignalEl = document.getElementById('mvrv-signal');
+                mvrvSignalEl.textContent = onchain.mvrv?.signal || '--';
+                mvrvSignalEl.style.color = onchain.mvrv?.color || '#888';
+                
+                document.getElementById('market-cap').textContent = `$${(onchain.mvrv?.market_cap / 1e12 || 0).toFixed(2)}T`;
+                document.getElementById('realized-cap').textContent = `$${(onchain.mvrv?.realized_cap / 1e12 || 0).toFixed(2)}T`;
+                
+                // Exchange Flows
+                const flow = onchain.exchange_flows?.net_flow_24h || 0;
+                const flowEl = document.getElementById('net-flow');
+                flowEl.textContent = `${flow > 0 ? '+' : ''}${flow.toFixed(0)} BTC`;
+                flowEl.className = `metric-value ${flow < -50 ? 'green' : flow > 50 ? 'red' : 'yellow'}`;
+                
+                document.getElementById('flow-direction').textContent = onchain.exchange_flows?.flow_direction || '--';
+                const flowSignalEl = document.getElementById('flow-signal');
+                flowSignalEl.textContent = onchain.exchange_flows?.signal || '--';
+                flowSignalEl.style.color = onchain.exchange_flows?.color || '#888';
+                
+                document.getElementById('large-txs').textContent = onchain.exchange_flows?.large_transactions || '--';
+                
+                // LTH
+                document.getElementById('lth-percent').textContent = `${onchain.lth_supply?.lth_percentage || '--'}%`;
+                document.getElementById('hodl-strength').textContent = onchain.lth_supply?.hodl_strength || '--';
+                const lthSignalEl = document.getElementById('lth-signal');
+                lthSignalEl.textContent = onchain.lth_supply?.signal || '--';
+                lthSignalEl.style.color = onchain.lth_supply?.color || '#888';
+                document.getElementById('lth-supply').textContent = `${(onchain.lth_supply?.lth_supply_btc / 1e6 || 0).toFixed(1)}M BTC`;
+                
+                // Network Health
+                const healthScore = onchain.network_health?.health_score || 0;
+                const healthEl = document.getElementById('health-score');
+                healthEl.textContent = `${healthScore.toFixed(0)}/100`;
+                healthEl.className = `metric-value ${healthScore > 70 ? 'green' : healthScore > 40 ? 'yellow' : 'red'}`;
+                
+                const healthStatusEl = document.getElementById('health-status');
+                healthStatusEl.textContent = onchain.network_health?.status || '--';
+                healthStatusEl.style.color = onchain.network_health?.color || '#888';
+                
+                document.getElementById('hash-rate').textContent = `${(onchain.network_health?.hash_rate / 1e12 || 0).toFixed(1)} TH/s`;
+                document.getElementById('daily-txs').textContent = (onchain.network_health?.daily_transactions || 0).toLocaleString();
+                
+                // Load Correlation Data
+                const corrRes = await fetch('/api/correlation');
+                const correlation = await corrRes.json();
+                
+                // MSTR
+                document.getElementById('mstr-premium').textContent = `${correlation.mstr?.nav_premium?.toFixed(1) || '--'}%`;
+                document.getElementById('mstr-price').textContent = `$${correlation.mstr?.price?.toFixed(2) || '--'}`;
+                document.getElementById('mstr-beta').textContent = `${correlation.mstr?.beta?.toFixed(2) || '--'}x`;
+                document.getElementById('mstr-signal').textContent = correlation.mstr?.signals?.[0]?.type || 'neutral';
+                
+                // ETH
+                document.getElementById('eth-ratio').textContent = correlation.eth_btc?.current_ratio?.toFixed(4) || '--';
+                document.getElementById('eth-price').textContent = `$${correlation.eth_btc?.price?.toLocaleString() || '--'}`;
+                document.getElementById('eth-trend').textContent = correlation.eth_btc?.trend_signal || '--';
+                document.getElementById('eth-signal').textContent = correlation.eth_btc?.signals?.[0]?.type || 'neutral';
+                
+                // SOL
+                document.getElementById('sol-ratio').textContent = correlation.solana?.sol_btc_ratio?.toFixed(5) || '--';
+                document.getElementById('sol-price').textContent = `$${correlation.solana?.price?.toFixed(2) || '--'}`;
+                const solChange = correlation.solana?.price_change_24h || 0;
+                const solChangeEl = document.getElementById('sol-change');
+                solChangeEl.textContent = `${solChange > 0 ? '+' : ''}${solChange.toFixed(2)}%`;
+                solChangeEl.className = `metric-value ${solChange > 0 ? 'green' : 'red'}`;
+                
+                const solMomentum = correlation.solana?.price_momentum || 0;
+                const solMomEl = document.getElementById('sol-momentum');
+                solMomEl.textContent = solMomentum > 0.5 ? 'Positive' : solMomentum < -0.5 ? 'Negative' : 'Neutral';
+                solMomEl.className = `metric-value ${solMomentum > 0.5 ? 'green' : solMomentum < -0.5 ? 'red' : 'yellow'}`;
+                
+                // Update status
+                status.textContent = '✅ All data loaded successfully - No Buy/Sell signals, using color zones';
+                document.getElementById('status').className = 'status';
+                
+            } catch (error) {
+                status.textContent = `❌ Error loading data: ${error.message}`;
+                document.getElementById('status').className = 'status error';
+            }
+        }
+        
+        // Load data on page load
+        loadAllData();
+        
+        // Refresh every 30 seconds
+        setInterval(loadAllData, 30000);
+    </script>
+</body>
+</html>

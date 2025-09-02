@@ -124,7 +124,7 @@ class RealOnChainData:
             # Determine flow direction based on mempool analysis
             if estimated_flow > 100:
                 flow_direction = "INFLOW"
-                signal = "Bearish - Selling Pressure"
+                signal = "Bearish - Red Zone"
                 color = "#ff6600"
             elif estimated_flow < -100:
                 flow_direction = "OUTFLOW"
@@ -296,11 +296,11 @@ class RealOnChainData:
                     # Determine condition
                     if z_score < -0.5:
                         condition = "DEEP_VALUE"
-                        signal = "Strong Buy"
+                        signal = "Strong Green"
                         color = "#00ff00"
                     elif z_score < 0:
                         condition = "UNDERVALUED"
-                        signal = "Buy"
+                        signal = "Green Zone"
                         color = "#00cc66"
                     elif z_score < 2:
                         condition = "FAIR_VALUE"
@@ -312,7 +312,7 @@ class RealOnChainData:
                         color = "#ff6600"
                     else:
                         condition = "BUBBLE"
-                        signal = "Sell"
+                        signal = "Red Zone"
                         color = "#ff0000"
                     
                     result = {

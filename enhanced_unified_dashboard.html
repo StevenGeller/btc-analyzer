@@ -881,9 +881,9 @@
                 </div>
                 <div class="power-law-indicator">
                     <div class="power-law-zones">
-                        <div class="pl-zone pl-undervalued">Buy Zone</div>
+                        <div class="pl-zone pl-undervalued">Green Zone</div>
                         <div class="pl-zone pl-fair">Fair Zone</div>
-                        <div class="pl-zone pl-overvalued">Sell Zone</div>
+                        <div class="pl-zone pl-overvalued">Red Zone</div>
                     </div>
                     <div class="power-law-bar">
                         <div class="power-law-marker" id="powerLawMarker">
@@ -1404,7 +1404,7 @@
                     } else if (deviation < -10) {
                         insights.push({
                             type: 'opportunity',
-                            message: `🟢 Bitcoin is ${Math.abs(deviation).toFixed(1)}% below fair value - Potential buying opportunity`
+                            message: `🟢 Bitcoin is ${Math.abs(deviation).toFixed(1)}% below fair value - Green zone opportunity`
                         });
                     } else {
                         insights.push({
@@ -1420,7 +1420,7 @@
                     if (fgi < 25) {
                         insights.push({
                             type: 'opportunity',
-                            message: `😱 Extreme Fear (${fgi}) - Historically good buying opportunity`
+                            message: `😱 Extreme Fear (${fgi}) - Historically strong green zone`
                         });
                     } else if (fgi > 75) {
                         insights.push({
