@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>₿ Professional Bitcoin & Multi-Asset Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .main-container {
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            background: linear-gradient(45deg, #f7931a, #ff6b35, #f39c12);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease-in-out infinite;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            color: #f7931a;
+            margin-bottom: 20px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .connection-status.connected {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .connection-status.disconnected {
+            background: rgba(255, 68, 68, 0.1);
+            color: #ff4444;
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: rgba(17, 17, 17, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #f7931a, transparent);
+            animation: scanline 2s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: #f7931a;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: '●';
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        /* Bitcoin Price Section */
+        .btc-price {
+            text-align: center;
+        }
+
+        .current-price {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #f7931a;
+            margin: 15px 0;
+            text-shadow: 0 0 20px rgba(247, 147, 26, 0.5);
+        }
+
+        .price-change {
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .price-change.positive {
+            color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .price-change.negative {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        /* Market State */
+        .market-state {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .state-indicator {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .state-confidence {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        /* Multi-Asset Grid */
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .asset-card {
+            background: rgba(17, 17, 17, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(247, 147, 26, 0.2);
+            border-color: rgba(247, 147, 26, 0.6);
+        }
+
+        .asset-card.mstr::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #f7931a, transparent);
+            animation: scanline 2s linear infinite;
+        }
+
+        .asset-card.eth::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #627eea, transparent);
+            animation: scanline 2s linear infinite;
+        }
+
+        .asset-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .asset-symbol {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .asset-card.mstr .asset-symbol {
+            color: #f7931a;
+        }
+
+        .asset-card.eth .asset-symbol {
+            color: #627eea;
+        }
+
+        .correlation-metrics {
+            margin-bottom: 15px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .metric-row span:first-child {
+            color: #888;
+        }
+
+        .metric-row span:last-child {
+            font-weight: bold;
+        }
+
+        .signal-indicator {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+
+        .signal-indicator.bullish {
+            border-left: 4px solid #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .signal-indicator.bearish {
+            border-left: 4px solid #ff4444;
+            background: rgba(255, 68, 68, 0.05);
+        }
+
+        .signal-indicator.neutral {
+            border-left: 4px solid #888;
+            background: rgba(136, 136, 136, 0.05);
+        }
+
+        .signal-indicator.warning {
+            border-left: 4px solid #ff9500;
+            background: rgba(255, 149, 0, 0.05);
+        }
+
+        .signal-message {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .signal-action {
+            font-size: 0.8rem;
+            color: #888;
+            font-style: italic;
+            line-height: 1.3;
+        }
+
+        /* Market Phase */
+        .market-phase {
+            background: rgba(17, 17, 17, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .phase-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .rotation-wheel {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 15px auto;
+            border: 2px solid rgba(247, 147, 26, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .phase-indicator {
+            font-size: 2rem;
+            animation: rotatePhase 8s linear infinite;
+        }
+
+        @keyframes rotatePhase {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Technical Analysis */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .analysis-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .analysis-label {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .analysis-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .analysis-change {
+            font-size: 0.8rem;
+            margin-top: 2px;
+        }
+
+        /* Recommendations */
+        .recommendations {
+            margin-top: 20px;
+        }
+
+        .recommendation {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid;
+            border-radius: 5px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+        }
+
+        .recommendation.high {
+            border-color: #ff4444;
+            background: rgba(255, 68, 68, 0.05);
+        }
+
+        .recommendation.medium {
+            border-color: #ff9500;
+            background: rgba(255, 149, 0, 0.05);
+        }
+
+        .recommendation.low {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(247, 147, 26, 0.2);
+            border-left: 3px solid #f7931a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .timestamp {
+            text-align: center;
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 20px;
+        }
+
+        .disclaimer {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #ff9999;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-grid { 
+                grid-template-columns: 1fr; 
+                gap: 20px;
+            }
+            .header h1 { font-size: 2rem; }
+            .current-price { font-size: 2.2rem; }
+            .main-container { padding: 15px; }
+            .asset-grid { grid-template-columns: 1fr; }
+            .analysis-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <h1>₿ INTELLIGENCE TERMINAL</h1>
+            <div class="subtitle">REAL-TIME MARKET INTELLIGENCE</div>
+            <div class="connection-status" id="connection-status">
+                <span id="status-text">Connecting...</span>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <span>Loading alpha signals and whale movements...</span>
+        </div>
+
+        <div id="dashboard" style="display: none;">
+            <!-- Main Bitcoin Analysis -->
+            <div class="main-grid">
+                <div class="section btc-price">
+                    <div class="section-title">BITCOIN PRICE ACTION</div>
+                    <div class="current-price" id="current-price">$0</div>
+                    <div class="price-change" id="price-change">0%</div>
+                    <div class="market-state">
+                        <div class="state-indicator" id="market-state">ANALYZING</div>
+                        <div class="state-confidence" id="state-confidence">Confidence: 0%</div>
+                    </div>
+                    <div class="timestamp" id="btc-timestamp">Last update: Never</div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">TECHNICAL INTEL</div>
+                    <div class="analysis-grid">
+                        <div class="analysis-item">
+                            <div class="analysis-label">Volume Power</div>
+                            <div class="analysis-value" id="volume-24h">$0</div>
+                        </div>
+                        <div class="analysis-item">
+                            <div class="analysis-label">Daily Top</div>
+                            <div class="analysis-value" id="high-24h">$0</div>
+                        </div>
+                        <div class="analysis-item">
+                            <div class="analysis-label">Daily Bottom</div>
+                            <div class="analysis-value" id="low-24h">$0</div>
+                        </div>
+                        <div class="analysis-item">
+                            <div class="analysis-label">Alpha Score</div>
+                            <div class="analysis-value" id="composite-score">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="recommendations" id="recommendations">
+                        <!-- Dynamic recommendations -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Sentiment -->
+            <div class="section">
+                <div class="section-title">MARKET SENTIMENT</div>
+                
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <div class="analysis-label">RSI</div>
+                        <div class="analysis-value" id="rsi-value">50</div>
+                    </div>
+                    <div class="analysis-item">
+                        <div class="analysis-label">24h Range</div>
+                        <div class="analysis-value" id="range-position">50%</div>
+                    </div>
+                    <div class="analysis-item">
+                        <div class="analysis-label">Volatility</div>
+                        <div class="analysis-value" id="volatility">Low</div>
+                    </div>
+                    <div class="analysis-item">
+                        <div class="analysis-label">Momentum</div>
+                        <div class="analysis-value" id="momentum">Neutral</div>
+                    </div>
+                </div>
+                
+                <div class="signal-indicator neutral" id="sentiment-signal">
+                    <div class="signal-message" id="sentiment-message">Calculating market sentiment...</div>
+                </div>
+            </div>
+
+            <!-- Whale On-Chain Intelligence -->
+            <div class="section">
+                <div class="section-title">🐋 WHALE ON-CHAIN INTELLIGENCE (24H)</div>
+                
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <div class="analysis-label">24h Net Flow</div>
+                        <div class="analysis-value" id="exchange-flow">Loading...</div>
+                    </div>
+                    <div class="analysis-item">
+                        <div class="analysis-label">Flow Ratio</div>
+                        <div class="analysis-value" id="flow-ratio">0.0x</div>
+                    </div>
+                    <div class="analysis-item">
+                        <div class="analysis-label">24h Whale TXs</div>
+                        <div class="analysis-value" id="whale-count">0</div>
+                    </div>
+                    <div class="analysis-item">
+                        <div class="analysis-label">Mempool Now</div>
+                        <div class="analysis-value" id="smart-money">Loading...</div>
+                    </div>
+                </div>
+                
+                <div class="signal-indicator neutral" id="whale-signal">
+                    <div class="signal-message" id="whale-message">Loading whale data...</div>
+                    <div class="signal-action" id="whale-action"></div>
+                </div>
+                
+                <!-- Large Transactions Alert -->
+                <div id="large-transactions" style="margin-top: 15px; display: none;">
+                    <div style="color: #f7931a; font-size: 0.9rem; margin-bottom: 10px;">⚡ RECENT WHALE MOVEMENTS:</div>
+                    <div id="whale-txs" style="font-size: 0.85rem; color: #aaa; line-height: 1.4;"></div>
+                </div>
+            </div>
+
+            <!-- Multi-Asset Correlation -->
+            <div class="section">
+                <div class="section-title">DEGEN CORRELATION MATRIX</div>
+                
+                <div class="asset-grid">
+                    <!-- MSTR Card -->
+                    <div class="asset-card mstr">
+                        <div class="asset-header">
+                            <span class="asset-symbol">MSTR</span>
+                            <div>
+                                <span style="font-size: 1.1rem; font-weight: bold;" id="mstr-price">$0</span>
+                            </div>
+                        </div>
+                        <div class="correlation-metrics">
+                            <div class="metric-row">
+                                <span>BTC Leverage:</span>
+                                <span id="mstr-beta">0.0x</span>
+                            </div>
+                            <div class="metric-row">
+                                <span>Premium:</span>
+                                <span id="mstr-nav">0%</span>
+                            </div>
+                            <div class="metric-row">
+                                <span>Alpha:</span>
+                                <span id="mstr-divergence">0%</span>
+                            </div>
+                        </div>
+                        <div class="signal-indicator" id="mstr-signal">
+                            <div class="signal-message" id="mstr-message">Loading MSTR analysis...</div>
+                            <div class="signal-action" id="mstr-action"></div>
+                        </div>
+                    </div>
+
+                    <!-- ETH Card -->
+                    <div class="asset-card eth">
+                        <div class="asset-header">
+                            <span class="asset-symbol">ETH</span>
+                            <div>
+                                <span style="font-size: 1.1rem; font-weight: bold;" id="eth-price">$0</span>
+                            </div>
+                        </div>
+                        <div class="correlation-metrics">
+                            <div class="metric-row">
+                                <span>BTC Ratio:</span>
+                                <span id="eth-btc-ratio">0.0000</span>
+                            </div>
+                            <div class="metric-row">
+                                <span>Support:</span>
+                                <span id="eth-support">0.050</span>
+                            </div>
+                            <div class="metric-row">
+                                <span>Resistance:</span>
+                                <span id="eth-resistance">0.080</span>
+                            </div>
+                        </div>
+                        <div class="signal-indicator" id="eth-signal">
+                            <div class="signal-message" id="eth-message">Loading ETH/BTC analysis...</div>
+                            <div class="signal-action" id="eth-action"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- SOL Card -->
+                    <div class="asset-card">
+                        <div class="asset-header">
+                            <div style="display: flex; align-items: center;">
+                                <span class="asset-icon">☀️</span>
+                                <div>
+                                    <div class="asset-name">SOL</div>
+                                    <span style="font-size: 1.1rem; font-weight: bold;" id="sol-price">$0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="correlation-metrics">
+                            <div class="metric-row">
+                                <span>BTC Ratio:</span>
+                                <span id="sol-btc-ratio">0.0018</span>
+                            </div>
+                            <div class="metric-row">
+                                <span>24h Change:</span>
+                                <span id="sol-change">0.0%</span>
+                            </div>
+                            <div class="metric-row">
+                                <span>Momentum:</span>
+                                <span id="sol-momentum">0.0%</span>
+                            </div>
+                        </div>
+                        <div class="signal-indicator" id="sol-signal">
+                            <div class="signal-message" id="sol-message">Loading SOL analysis...</div>
+                            <div class="signal-action" id="sol-action"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Phase -->
+            <div class="market-phase">
+                <div class="rotation-wheel">
+                    <div class="phase-indicator" id="phase-wheel">⚖️</div>
+                </div>
+                <div class="phase-title" id="phase-title">CAPITAL ROTATION DETECTOR</div>
+                <div id="phase-message" style="margin: 10px 0; font-size: 1rem;">Scanning for capital rotation and degen flows...</div>
+                <div id="phase-confidence" style="color: #888; font-size: 0.9rem;">Confidence: 0%</div>
+            </div>
+
+            <div class="timestamp" id="timestamp">
+                Last comprehensive update: Never
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            ⚠️ <strong>NOT FINANCIAL ADVICE:</strong> This terminal is for educational purposes only. 
+            You can lose everything trading crypto. DYOR and don't be a degen with money you can't afford to lose. 
+            Past performance doesn't guarantee future results. The market can stay irrational longer than you can stay solvent.
+        </div>
+    </div>
+
+    <script>
+        class UnifiedDashboard {
+            constructor() {
+                this.ws = null;
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.btcData = null;
+                this.correlationData = null;
+                
+                this.init();
+            }
+
+            async init() {
+                this.connectWebSocket();
+                
+                // Fetch whale data immediately
+                this.fetchWhaleData();
+                
+                // Fallback HTTP polling
+                setTimeout(() => {
+                    if (!this.isConnected) {
+                        this.fetchHttpData();
+                    }
+                }, 3000);
+                
+                // Refresh whale data every 30 seconds
+                setInterval(() => this.fetchWhaleData(), 30000);
+            }
+            
+            async fetchWhaleData() {
+                try {
+                    const response = await fetch('/api/whale');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.whaleData = data;
+                        this.updateWhaleData(data);
+                    }
+                } catch (error) {
+                    console.error('Whale data fetch error:', error);
+                }
+            }
+
+            connectWebSocket() {
+                try {
+                    const wsUrl = `ws://${window.location.host}/ws`;
+                    console.log(`Connecting to WebSocket: ${wsUrl}`);
+                    
+                    this.ws = new WebSocket(wsUrl);
+
+                    this.ws.onopen = () => {
+                        console.log('WebSocket connected');
+                        this.isConnected = true;
+                        this.reconnectAttempts = 0;
+                        this.updateConnectionStatus('connected');
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            this.btcData = data;
+                            this.updateBitcoinData(data);
+                            this.hideLoading();
+                        } catch (e) {
+                            console.error('WebSocket message parsing error:', e);
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        console.log('WebSocket disconnected');
+                        this.isConnected = false;
+                        this.updateConnectionStatus('disconnected');
+                        
+                        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                            setTimeout(() => {
+                                this.connectWebSocket();
+                            }, 2000 * (this.reconnectAttempts + 1));
+                            this.reconnectAttempts++;
+                        }
+                    };
+
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.updateConnectionStatus('disconnected');
+                    };
+
+                } catch (error) {
+                    console.error('WebSocket connection error:', error);
+                    this.fetchHttpData();
+                }
+
+                // Also fetch correlation data periodically
+                this.fetchCorrelationData();
+                setInterval(() => this.fetchCorrelationData(), 30000); // Every 30 seconds
+            }
+
+            async fetchCorrelationData() {
+                try {
+                    const response = await fetch('/api/correlation');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.correlationData = data;
+                        this.updateCorrelationData(data);
+                    }
+                } catch (error) {
+                    console.error('Correlation data fetch error:', error);
+                }
+            }
+
+            async fetchHttpData() {
+                try {
+                    const [btcResponse, correlationResponse, whaleResponse] = await Promise.all([
+                        fetch('/api/bitcoin-data').catch(() => null),
+                        fetch('/api/correlation').catch(() => null),
+                        fetch('/api/whale').catch(() => null)
+                    ]);
+
+                    if (btcResponse && btcResponse.ok) {
+                        const btcData = await btcResponse.json();
+                        this.btcData = btcData;
+                        this.updateBitcoinData(btcData);
+                    }
+
+                    if (correlationResponse && correlationResponse.ok) {
+                        const correlationData = await correlationResponse.json();
+                        this.correlationData = correlationData;
+                        this.updateCorrelationData(correlationData);
+                    }
+                    
+                    if (whaleResponse && whaleResponse.ok) {
+                        const whaleData = await whaleResponse.json();
+                        this.whaleData = whaleData;
+                        this.updateWhaleData(whaleData);
+                    }
+
+                    this.hideLoading();
+                    
+                    // Continue polling
+                    setTimeout(() => this.fetchHttpData(), 15000); // 15 second polling
+                    
+                } catch (error) {
+                    console.error('HTTP fetch error:', error);
+                    setTimeout(() => this.fetchHttpData(), 10000);
+                }
+            }
+
+            updateBitcoinData(data) {
+                try {
+                    if (data.current_data) {
+                        const price = data.current_data.price || 0;
+                        const change24h = data.current_data.price_change_24h || 0;
+                        const volume24h = data.current_data.volume_24h || 0;
+                        const high24h = data.current_data.high_24h || 0;
+                        const low24h = data.current_data.low_24h || 0;
+
+                        document.getElementById('current-price').textContent = '$' + price.toLocaleString('en-US', {minimumFractionDigits: 2});
+                        
+                        const changeElement = document.getElementById('price-change');
+                        changeElement.textContent = (change24h >= 0 ? '+' : '') + change24h.toFixed(2) + '%';
+                        changeElement.className = 'price-change ' + (change24h >= 0 ? 'positive' : 'negative');
+                        
+                        document.getElementById('volume-24h').textContent = '$' + (volume24h / 1e9).toFixed(1) + 'B';
+                        document.getElementById('high-24h').textContent = '$' + high24h.toLocaleString();
+                        document.getElementById('low-24h').textContent = '$' + low24h.toLocaleString();
+                    }
+
+                    if (data.market_state) {
+                        const stateElement = document.getElementById('market-state');
+                        stateElement.textContent = data.market_state.label || data.market_state.state || 'UNKNOWN';
+                        stateElement.style.backgroundColor = (data.market_state.color || '#666') + '20';
+                        stateElement.style.color = data.market_state.color || '#fff';
+                        
+                        document.getElementById('state-confidence').textContent = 
+                            'Confidence: ' + ((data.market_state.confidence || 0) * 100).toFixed(1) + '%';
+                    }
+
+                    if (data.composite_score !== undefined) {
+                        document.getElementById('composite-score').textContent = data.composite_score.toFixed(3);
+                    }
+
+                    // Update sentiment data
+                    this.updateSentimentData(data);
+
+                    // Update recommendations
+                    if (data.recommendations) {
+                        this.updateRecommendations(data.recommendations);
+                    }
+
+                    // Update timestamp
+                    document.getElementById('btc-timestamp').textContent = 
+                        'Last update: ' + new Date().toLocaleTimeString();
+                        
+                } catch (error) {
+                    console.error('Bitcoin data update error:', error);
+                }
+            }
+
+            updateSentimentData(data) {
+                try {
+                    // Calculate reliable metrics from real Bitcoin data
+                    if (data.timeframe_analysis && data.timeframe_analysis['24h']) {
+                        const tf = data.timeframe_analysis['24h'];
+                        
+                        // RSI
+                        document.getElementById('rsi-value').textContent = tf.rsi ? tf.rsi.toFixed(1) : '50.0';
+                        
+                        // Range position
+                        const high = data.current_data?.high_24h || 0;
+                        const low = data.current_data?.low_24h || 0;
+                        const current = data.current_data?.price || 0;
+                        
+                        if (high > low && current > 0) {
+                            const rangePos = ((current - low) / (high - low) * 100);
+                            document.getElementById('range-position').textContent = rangePos.toFixed(0) + '%';
+                        }
+                        
+                        // Volatility
+                        const volatility = Math.abs(tf.price_change_pct || 0);
+                        let volText = 'Low';
+                        if (volatility > 5) volText = 'High';
+                        else if (volatility > 2) volText = 'Medium';
+                        document.getElementById('volatility').textContent = volText;
+                        
+                        // Momentum
+                        const momentum = tf.price_change_pct || 0;
+                        let momentumText = 'Neutral';
+                        if (momentum > 2) momentumText = 'Strong Up';
+                        else if (momentum > 0.5) momentumText = 'Up';
+                        else if (momentum < -2) momentumText = 'Strong Down';
+                        else if (momentum < -0.5) momentumText = 'Down';
+                        document.getElementById('momentum').textContent = momentumText;
+                    }
+                    
+                    // Update sentiment message
+                    const change = data.current_data?.price_change_24h || 0;
+                    let message = '';
+                    let signalClass = 'neutral';
+                    
+                    if (change > 3) {
+                        message = '🚀 STRONG BULLISH MOMENTUM - Bitcoin pumping hard!';
+                        signalClass = 'bullish';
+                    } else if (change > 1) {
+                        message = '📈 BULLISH TREND - Price moving up steadily';
+                        signalClass = 'bullish';
+                    } else if (change < -3) {
+                        message = '📉 STRONG BEARISH PRESSURE - Heavy selling';
+                        signalClass = 'bearish';
+                    } else if (change < -1) {
+                        message = '🔻 BEARISH TREND - Price declining';
+                        signalClass = 'bearish';
+                    } else {
+                        message = '⚖️ SIDEWAYS ACTION - Waiting for direction';
+                        signalClass = 'neutral';
+                    }
+                    
+                    const sentimentElement = document.getElementById('sentiment-signal');
+                    document.getElementById('sentiment-message').textContent = message;
+                    sentimentElement.className = 'signal-indicator ' + signalClass;
+                    
+                } catch (error) {
+                    console.error('Sentiment update error:', error);
+                }
+            }
+
+            updateCorrelationData(data) {
+                try {
+                    // Update MSTR data
+                    if (data.mstr) {
+                        this.updateMSTRCard(data.mstr);
+                    }
+                    
+                    // Update ETH data
+                    if (data.eth_btc) {
+                        this.updateETHCard(data.eth_btc);
+                    }
+                    
+                    // Update SOL data
+                    if (data.solana) {
+                        this.updateSOLCard(data.solana);
+                    }
+                    
+                    // Update market phase
+                    if (data.market_phase) {
+                        this.updateMarketPhase(data.market_phase);
+                    }
+                    
+                    // Update main timestamp
+                    document.getElementById('timestamp').textContent = 
+                        'Last comprehensive update: ' + new Date().toLocaleString();
+                        
+                } catch (error) {
+                    console.error('Correlation data update error:', error);
+                }
+            }
+
+            updateMSTRCard(mstrData) {
+                try {
+                    const price = mstrData.price || 500;
+                    const beta = mstrData.beta || 0;
+                    const navPremium = mstrData.nav_premium || 0;
+                    const alpha = mstrData.alpha || 0;  // Use alpha instead of divergence
+                    
+                    document.getElementById('mstr-price').textContent = '$' + price.toFixed(2);
+                    document.getElementById('mstr-beta').textContent = beta.toFixed(1) + 'x';
+                    document.getElementById('mstr-nav').textContent = navPremium.toFixed(1) + '%';
+                    document.getElementById('mstr-divergence').textContent = (alpha > 0 ? '+' : '') + alpha.toFixed(1) + '%';
+                    
+                    if (mstrData.signals && mstrData.signals.length > 0) {
+                        const signal = mstrData.signals[0];
+                        const signalElement = document.getElementById('mstr-signal');
+                        
+                        document.getElementById('mstr-message').textContent = signal.message;
+                        document.getElementById('mstr-action').textContent = signal.action;
+                        
+                        signalElement.className = 'signal-indicator ' + this.getSignalClass(signal.type);
+                    }
+                } catch (error) {
+                    console.error('MSTR update error:', error);
+                }
+            }
+
+            updateETHCard(ethData) {
+                try {
+                    const price = ethData.price || 4470;
+                    const ratio = ethData.current_ratio || 0;
+                    const support = ethData.support_level || 0.050;
+                    const resistance = ethData.resistance_level || 0.080;
+                    
+                    document.getElementById('eth-price').textContent = '$' + price.toFixed(2);
+                    document.getElementById('eth-btc-ratio').textContent = ratio.toFixed(4);
+                    document.getElementById('eth-support').textContent = support.toFixed(3);
+                    document.getElementById('eth-resistance').textContent = resistance.toFixed(3);
+                    
+                    if (ethData.signals && ethData.signals.length > 0) {
+                        const signal = ethData.signals[0];
+                        const signalElement = document.getElementById('eth-signal');
+                        
+                        document.getElementById('eth-message').textContent = signal.message;
+                        document.getElementById('eth-action').textContent = signal.action;
+                        
+                        signalElement.className = 'signal-indicator ' + this.getSignalClass(signal.type);
+                    }
+                } catch (error) {
+                    console.error('ETH update error:', error);
+                }
+            }
+
+            updateSOLCard(solData) {
+                try {
+                    if (solData.error || solData.signal === 'insufficient_data') {
+                        document.getElementById('sol-message').textContent = 
+                            solData.message || 'Building SOL data history...';
+                        document.getElementById('sol-action').textContent = '';
+                        return;
+                    }
+                    
+                    const price = solData.price || 205;
+                    const change24h = solData.price_change_24h || 0;
+                    const ratio = solData.sol_btc_ratio || 0.0018;
+                    const momentum = solData.price_momentum || 0;
+                    
+                    document.getElementById('sol-price').textContent = '$' + price.toFixed(2);
+                    document.getElementById('sol-btc-ratio').textContent = ratio.toFixed(4);
+                    document.getElementById('sol-change').textContent = change24h.toFixed(1) + '%';
+                    document.getElementById('sol-momentum').textContent = momentum.toFixed(1) + '%';
+                    
+                    if (solData.signals && solData.signals.length > 0) {
+                        const signal = solData.signals[0];
+                        const signalDiv = document.getElementById('sol-signal');
+                        
+                        // Update signal styling
+                        signalDiv.className = 'signal-indicator';
+                        if (signal.type === 'bullish' || signal.type === 'momentum') {
+                            signalDiv.classList.add('bullish');
+                        } else if (signal.type === 'bearish') {
+                            signalDiv.classList.add('bearish');
+                        } else {
+                            signalDiv.classList.add('neutral');
+                        }
+                        
+                        document.getElementById('sol-message').textContent = signal.message;
+                        document.getElementById('sol-action').textContent = signal.action;
+                    }
+                } catch (error) {
+                    console.error('SOL update error:', error);
+                }
+            }
+
+            updateMarketPhase(phaseData) {
+                try {
+                    const phase = phaseData.phase || 'neutral';
+                    const message = phaseData.message || 'No clear pattern';
+                    const confidence = (phaseData.confidence || 0) * 100;
+                    
+                    document.getElementById('phase-title').textContent = 
+                        phase.toUpperCase().replace(/_/g, ' ') + ' PHASE';
+                    document.getElementById('phase-message').textContent = message;
+                    
+                    // Enhanced confidence display with market conditions
+                    let confidenceHtml = `Confidence: ${confidence.toFixed(0)}%`;
+                    
+                    // Add market conditions summary if available
+                    if (phaseData.market_conditions) {
+                        const mc = phaseData.market_conditions;
+                        const conditionsHtml = [];
+                        
+                        // MSTR Signal
+                        if (mc.mstr_signal) {
+                            const color = mc.mstr_signal.label === 'bullish' ? '#4ade80' : 
+                                        mc.mstr_signal.label === 'bearish' ? '#ff6b6b' : '#888';
+                            conditionsHtml.push(`MSTR: <span style="color: ${color}">${mc.mstr_signal.value.toFixed(2)} (${mc.mstr_signal.label})</span>`);
+                        }
+                        
+                        // ETH Signal
+                        if (mc.eth_signal) {
+                            const color = mc.eth_signal.label === 'bullish' ? '#4ade80' : 
+                                        mc.eth_signal.label === 'bearish' ? '#ff6b6b' : '#888';
+                            conditionsHtml.push(`ETH: <span style="color: ${color}">${mc.eth_signal.value.toFixed(2)} (${mc.eth_signal.label})</span>`);
+                        }
+                        
+                        // SOL Signal
+                        if (mc.sol_signal) {
+                            const color = mc.sol_signal.label === 'bullish' ? '#4ade80' : 
+                                        mc.sol_signal.label === 'bearish' ? '#ff6b6b' : '#888';
+                            conditionsHtml.push(`SOL: <span style="color: ${color}">${mc.sol_signal.value.toFixed(2)} (${mc.sol_signal.label})</span>`);
+                        }
+                        
+                        if (conditionsHtml.length > 0) {
+                            confidenceHtml += `<br><span style="font-size: 0.85em; color: #aaa;">` + conditionsHtml.join(' | ') + `</span>`;
+                        }
+                    }
+                    
+                    // Show conditions checked if available
+                    if (phaseData.conditions_checked && phaseData.conditions_checked.length > 0) {
+                        confidenceHtml += `<div style="margin-top: 10px; font-size: 0.8em; text-align: left; color: #888;">`;
+                        confidenceHtml += `<div style="color: #f7931a; margin-bottom: 5px;">Phase Detection Logic:</div>`;
+                        
+                        phaseData.conditions_checked.forEach(check => {
+                            confidenceHtml += `<div style="margin-left: 10px;">${check.met} ${check.name}: ${check.actual}</div>`;
+                        });
+                        
+                        confidenceHtml += `</div>`;
+                    }
+                    
+                    document.getElementById('phase-confidence').innerHTML = confidenceHtml;
+                    
+                    const phaseEmojis = {
+                        'risk_on': '🚀',
+                        'alt_season': '🌟',
+                        'full_altseason': '🚀🌟',
+                        'peak_euphoria': '🚨',
+                        'flight_to_quality': '🛡️',
+                        'neutral': '⚖️',
+                        'error': '❌'
+                    };
+                    
+                    document.getElementById('phase-wheel').textContent = phaseEmojis[phase] || '⚖️';
+                    
+                } catch (error) {
+                    console.error('Phase update error:', error);
+                }
+            }
+
+            updateRecommendations(recommendations) {
+                const container = document.getElementById('recommendations');
+                if (!container) return;
+                
+                container.innerHTML = '';
+                
+                // Filter out duplicate INFO messages about price and sentiment
+                const filteredRecs = recommendations.filter(rec => {
+                    const msg = rec.message || '';
+                    // Skip these duplicate messages
+                    if (msg.includes('Real-time Bitcoin:') || 
+                        msg.includes('Fear & Greed Index:')) {
+                        return false;
+                    }
+                    return true;
+                });
+                
+                filteredRecs.forEach(rec => {
+                    const div = document.createElement('div');
+                    div.className = `recommendation ${rec.priority}`;
+                    // Remove INFO: prefix if present
+                    const message = rec.message.replace('INFO: ', '');
+                    div.innerHTML = `
+                        <strong>${rec.type.toUpperCase()}:</strong> ${message}
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            getSignalClass(signalType) {
+                const classMap = {
+                    'opportunity': 'bullish',
+                    'leading': 'bullish', 
+                    'support': 'bullish',
+                    'warning': 'warning',
+                    'resistance': 'bearish',
+                    'lagging': 'bearish',
+                    'neutral': 'neutral',
+                    'error': 'warning'
+                };
+                
+                return classMap[signalType] || 'neutral';
+            }
+
+            updateConnectionStatus(status) {
+                const statusElement = document.getElementById('connection-status');
+                const statusText = document.getElementById('status-text');
+                
+                if (status === 'connected') {
+                    statusElement.className = 'connection-status connected';
+                    statusText.textContent = 'Connected';
+                } else {
+                    statusElement.className = 'connection-status disconnected';
+                    statusText.textContent = 'Disconnected - Retrying...';
+                }
+            }
+            
+            updateWhaleData(data) {
+                try {
+                    // Show data source
+                    if (data.data_source) {
+                        console.log('Whale data source:', data.data_source);
+                    }
+                    
+                    // Update exchange flow
+                    if (data.exchange_flows) {
+                        const flow = data.exchange_flows;
+                        const netFlow = flow.net_flow || 0;
+                        
+                        // Display net flow with color
+                        const flowEl = document.getElementById('exchange-flow');
+                        if (flowEl) {
+                            if (netFlow > 0) {
+                                flowEl.innerHTML = `+${netFlow.toLocaleString()} BTC`;
+                                flowEl.style.color = '#4ade80';
+                            } else if (netFlow < 0) {
+                                flowEl.innerHTML = `${netFlow.toLocaleString()} BTC`;
+                                flowEl.style.color = '#ff6b6b';
+                            } else {
+                                flowEl.innerHTML = '0 BTC';
+                                flowEl.style.color = '#888';
+                            }
+                        }
+                        
+                        // Update flow ratio
+                        const ratioEl = document.getElementById('flow-ratio');
+                        if (ratioEl && flow.ratio) {
+                            ratioEl.textContent = `${flow.ratio.toFixed(2)}x`;
+                        }
+                    }
+                    
+                    // Update whale count with full historical comparisons
+                    if (data.whale_metrics) {
+                        const whaleEl = document.getElementById('whale-count');
+                        if (whaleEl) {
+                            const metrics = data.whale_metrics.metrics || data.whale_metrics;
+                            const comparisons = data.whale_metrics.comparisons || {};
+                            const txCount = metrics['24h']?.tx_count || data.whale_metrics.tx_count_24h || 0;
+                            const totalBtc = metrics['24h']?.total_btc || data.whale_metrics.total_btc_24h || 0;
+                            
+                            if (txCount > 0) {
+                                // Build inline comparison text
+                                let mainText = `${txCount} <span style="font-size: 0.8em; color: #f7931a;">(${totalBtc.toFixed(0)} BTC)</span>`;
+                                
+                                // Add DoD inline
+                                if (comparisons.dod) {
+                                    const change = comparisons.dod.tx_change || 0;
+                                    const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '→';
+                                    const color = change > 0 ? '#4ade80' : change < 0 ? '#ff6b6b' : '#888';
+                                    mainText += ` <span style="font-size: 0.7em; color: ${color};">${arrow}${Math.abs(change).toFixed(0)}% DoD</span>`;
+                                }
+                                
+                                // Add other comparisons on new line
+                                let compLine = '';
+                                if (comparisons.wow || comparisons.mom || comparisons.yoy) {
+                                    const parts = [];
+                                    
+                                    if (comparisons.wow) {
+                                        const c = comparisons.wow.tx_change || 0;
+                                        const color = c > 0 ? '#4ade80' : c < 0 ? '#ff6b6b' : '#888';
+                                        parts.push(`<span style="color: ${color}">${c > 0 ? '+' : ''}${c.toFixed(0)}% WoW</span>`);
+                                    }
+                                    
+                                    if (comparisons.mom) {
+                                        const c = comparisons.mom.tx_change || 0;
+                                        const color = c > 0 ? '#4ade80' : c < 0 ? '#ff6b6b' : '#888';
+                                        parts.push(`<span style="color: ${color}">${c > 0 ? '+' : ''}${c.toFixed(0)}% MoM</span>`);
+                                    }
+                                    
+                                    if (comparisons.yoy) {
+                                        const c = comparisons.yoy.tx_change || 0;
+                                        const color = c > 0 ? '#4ade80' : c < 0 ? '#ff6b6b' : '#888';
+                                        parts.push(`<span style="color: ${color}">${c > 0 ? '+' : ''}${c.toFixed(0)}% YoY</span>`);
+                                    }
+                                    
+                                    if (parts.length > 0) {
+                                        compLine = `<div style="font-size: 0.65em; margin-top: 2px;">${parts.join(' | ')}</div>`;
+                                    }
+                                }
+                                
+                                // Add 4-year cycle position
+                                let cycleText = '';
+                                if (comparisons['4y_cycle']) {
+                                    cycleText = `<div style="font-size: 0.65em; color: #f7931a; margin-top: 2px;">🔄 ${comparisons['4y_cycle'].cycle_position}</div>`;
+                                }
+                                
+                                whaleEl.innerHTML = mainText + compLine + cycleText;
+                            } else {
+                                whaleEl.innerHTML = `<span style="color: #888;">Monitoring...</span>`;
+                            }
+                        }
+                    }
+                    
+                    // Update mempool stats if available
+                    if (data.mempool_stats && data.mempool_stats.tx_count) {
+                        const smartEl = document.getElementById('smart-money');
+                        if (smartEl) {
+                            const txCount = data.mempool_stats.tx_count;
+                            const size = data.mempool_stats.mempool_size || 0;
+                            if (txCount > 100000) {
+                                smartEl.innerHTML = `⚡ ${(txCount/1000).toFixed(0)}K TXs`;
+                                smartEl.style.color = '#ff6b6b';
+                            } else if (txCount > 50000) {
+                                smartEl.innerHTML = `📊 ${(txCount/1000).toFixed(0)}K TXs`;
+                                smartEl.style.color = '#f7931a';
+                            } else {
+                                smartEl.innerHTML = `✅ ${(txCount/1000).toFixed(0)}K TXs`;
+                                smartEl.style.color = '#4ade80';
+                            }
+                        }
+                    }
+                    
+                    // Update smart money
+                    if (data.smart_money) {
+                        const smartEl = document.getElementById('smart-money');
+                        if (smartEl) {
+                            const score = data.smart_money.sentiment_score || 0;
+                            if (score > 70) {
+                                smartEl.innerHTML = '💎 ACCUMULATING';
+                                smartEl.style.color = '#4ade80';
+                            } else if (score < 30) {
+                                smartEl.innerHTML = '📉 DISTRIBUTING';
+                                smartEl.style.color = '#ff6b6b';
+                            } else {
+                                smartEl.innerHTML = '➡️ NEUTRAL';
+                                smartEl.style.color = '#888';
+                            }
+                        }
+                    }
+                    
+                    // Update whale signal
+                    if (data.composite_signal) {
+                        const signalEl = document.getElementById('whale-signal');
+                        const messageEl = document.getElementById('whale-message');
+                        const actionEl = document.getElementById('whale-action');
+                        
+                        if (signalEl && messageEl) {
+                            messageEl.textContent = data.composite_signal.signal || 'No whale data';
+                            
+                            // Set signal color based on score
+                            const score = data.composite_signal.score || 0;
+                            signalEl.className = 'signal-indicator';
+                            if (score >= 70) {
+                                signalEl.classList.add('bullish');
+                            } else if (score <= 30) {
+                                signalEl.classList.add('bearish');
+                            } else {
+                                signalEl.classList.add('neutral');
+                            }
+                        }
+                        
+                        if (actionEl && data.exchange_flows) {
+                            actionEl.textContent = data.exchange_flows.alert || '';
+                        }
+                    }
+                    
+                    // Show large transactions if available
+                    if (data.large_transactions && data.large_transactions.length > 0) {
+                        const txContainer = document.getElementById('large-transactions');
+                        const txList = document.getElementById('whale-txs');
+                        
+                        if (txContainer && txList) {
+                            txContainer.style.display = 'block';
+                            
+                            const txHtml = data.large_transactions.slice(0, 5).map(tx => {
+                                const amount = tx.amount_btc || tx.amount || 0;
+                                const usdValue = tx.usd_value || 0;
+                                const type = tx.type || '';
+                                const icon = type.includes('large') ? '🐋' : '🐬';
+                                const usdStr = usdValue > 1000000 ? `$${(usdValue/1000000).toFixed(1)}M` : `$${(usdValue/1000).toFixed(0)}K`;
+                                return `${icon} ${amount.toFixed(2)} BTC (${usdStr})`;
+                            }).join('<br>');
+                            
+                            txList.innerHTML = txHtml || 'No recent whale movements';
+                        }
+                    } else {
+                        // Hide if no transactions
+                        const txContainer = document.getElementById('large-transactions');
+                        if (txContainer) {
+                            txContainer.style.display = 'block';
+                            const txList = document.getElementById('whale-txs');
+                            if (txList) {
+                                txList.innerHTML = 'Monitoring for whale movements...';
+                            }
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Whale data update error:', error);
+                }
+            }
+
+            hideLoading() {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            new UnifiedDashboard();
+        });
+    </script>
+</body>
+</html>

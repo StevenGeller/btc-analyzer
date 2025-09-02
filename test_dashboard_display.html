@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Data Verification</title>
+    <style>
+        body {
+            background: #0a0e27;
+            color: white;
+            font-family: monospace;
+            padding: 20px;
+        }
+        .test-section {
+            background: #161b3a;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 10px;
+        }
+        .success { color: #00ff88; }
+        .error { color: #ff4444; }
+        .data { color: #00ccff; }
+    </style>
+</head>
+<body>
+    <h1>Testing On-Chain Data Display</h1>
+    
+    <div class="test-section">
+        <h2>1. Fetching On-Chain Data...</h2>
+        <div id="onchain-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Fetching Correlation Data (SOL/BTC)...</h2>
+        <div id="correlation-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Dashboard Display Simulation</h2>
+        <div id="display-test"></div>
+    </div>
+
+    <script>
+        async function testOnChainData() {
+            try {
+                const response = await fetch('http://localhost:8000/api/onchain');
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('onchain-result');
+                
+                if (data.lth_supply && data.network_health) {
+                    const lthPercent = data.lth_supply.lth_percentage || '--';
+                    const networkScore = data.network_health.health_score || '--';
+                    
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ On-Chain Data Loaded Successfully!</p>
+                        <p class="data">💎 LTH: ${lthPercent}% (${data.lth_supply.hodl_strength})</p>
+                        <p class="data">⚡ Network Health: ${networkScore}/100 (${data.network_health.status})</p>
+                        <p class="data">📊 MVRV: ${data.mvrv.mvrv} (Z-Score: ${data.mvrv.z_score})</p>
+                        <p class="data">💰 Exchange Flow: ${data.exchange_flows.net_flow_24h} BTC (${data.exchange_flows.flow_direction})</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<p class="error">❌ Missing LTH or Network Health data</p>';
+                }
+            } catch (error) {
+                document.getElementById('onchain-result').innerHTML = 
+                    `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function testCorrelationData() {
+            try {
+                const response = await fetch('http://localhost:8000/api/correlation');
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('correlation-result');
+                
+                if (data.solana) {
+                    const solRatio = data.solana.sol_btc_ratio || '--';
+                    const solPrice = data.solana.price || '--';
+                    
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Correlation Data Loaded Successfully!</p>
+                        <p class="data">◎ SOL Price: $${solPrice}</p>
+                        <p class="data">◎ SOL/BTC Ratio: ${solRatio}</p>
+                        <p class="data">📈 ETH/BTC Ratio: ${data.eth_btc.current_ratio}</p>
+                        <p class="data">💼 MSTR Premium: ${data.mstr.nav_premium}%</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<p class="error">❌ Missing Solana data</p>';
+                }
+            } catch (error) {
+                document.getElementById('correlation-result').innerHTML = 
+                    `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        function simulateDashboardDisplay() {
+            const displayDiv = document.getElementById('display-test');
+            
+            // Simulate the actual dashboard display logic
+            displayDiv.innerHTML = `
+                <h3>Dashboard Would Display:</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <div style="background: #1a1f3a; padding: 10px; border-radius: 5px;">
+                        <p style="color: #888; font-size: 12px;">💎 LONG-TERM HOLDERS</p>
+                        <p class="data" style="font-size: 24px;">68.0%</p>
+                        <p style="color: #00ff00;">Strong HODLing</p>
+                    </div>
+                    <div style="background: #1a1f3a; padding: 10px; border-radius: 5px;">
+                        <p style="color: #888; font-size: 12px;">⚡ NETWORK HEALTH</p>
+                        <p class="data" style="font-size: 24px;">55/100</p>
+                        <p style="color: #ffcc00;">MODERATE</p>
+                    </div>
+                    <div style="background: #1a1f3a; padding: 10px; border-radius: 5px;">
+                        <p style="color: #888; font-size: 12px;">◎ SOL/BTC RATIO</p>
+                        <p class="data" style="font-size: 24px;">0.00184</p>
+                        <p style="color: #00ccff;">→ Stable</p>
+                    </div>
+                    <div style="background: #1a1f3a; padding: 10px; border-radius: 5px;">
+                        <p style="color: #888; font-size: 12px;">📊 MVRV Z-SCORE</p>
+                        <p class="data" style="font-size: 24px;">0.63</p>
+                        <p style="color: #ffcc00;">Fair Value</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Run all tests
+        testOnChainData();
+        testCorrelationData();
+        setTimeout(simulateDashboardDisplay, 1000);
+    </script>
+</body>
+</html>

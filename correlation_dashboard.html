@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Asset Correlation Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .main-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #f7931a, #ff6b35, #f39c12);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .asset-card {
+            background: rgba(17, 17, 17, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(247, 147, 26, 0.2);
+            border-color: rgba(247, 147, 26, 0.6);
+        }
+
+        .asset-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #f7931a, transparent);
+            animation: scanline 2s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .asset-card.mstr::before {
+            background: linear-gradient(90deg, transparent, #f7931a, transparent);
+        }
+
+        .asset-card.eth::before {
+            background: linear-gradient(90deg, transparent, #627eea, transparent);
+        }
+
+        .asset-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .asset-symbol {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .asset-card.mstr .asset-symbol {
+            color: #f7931a;
+        }
+
+        .asset-card.eth .asset-symbol {
+            color: #627eea;
+        }
+
+        .asset-price {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .asset-change {
+            font-size: 1rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .asset-change.positive {
+            color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .asset-change.negative {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        .correlation-metrics {
+            margin-bottom: 15px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .metric-row span:first-child {
+            color: #888;
+        }
+
+        .metric-row span:last-child {
+            font-weight: bold;
+        }
+
+        .signal-indicator {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+
+        .signal-message {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .signal-action {
+            font-size: 0.8rem;
+            color: #888;
+            font-style: italic;
+            line-height: 1.3;
+        }
+
+        .signal-indicator.bullish {
+            border-left: 4px solid #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .signal-indicator.bearish {
+            border-left: 4px solid #ff4444;
+            background: rgba(255, 68, 68, 0.05);
+        }
+
+        .signal-indicator.neutral {
+            border-left: 4px solid #888;
+            background: rgba(136, 136, 136, 0.05);
+        }
+
+        .signal-indicator.warning {
+            border-left: 4px solid #ff9500;
+            background: rgba(255, 149, 0, 0.05);
+        }
+
+        .market-phase {
+            background: rgba(17, 17, 17, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .market-phase::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(247, 147, 26, 0.03) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.1; }
+        }
+
+        .phase-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .phase-message {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .phase-confidence {
+            font-size: 0.9rem;
+            color: #888;
+            position: relative;
+            z-index: 1;
+        }
+
+        .rotation-wheel {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 20px auto;
+            border: 2px solid rgba(247, 147, 26, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .rotation-wheel::before {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #f7931a;
+            border-radius: 50%;
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 10px #f7931a;
+        }
+
+        .phase-indicator {
+            font-size: 1.2rem;
+            font-weight: bold;
+            animation: rotatePhase 8s linear infinite;
+        }
+
+        @keyframes rotatePhase {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .signals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .signal-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .signal-card h4 {
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ff9500, #00ff88);
+            transition: width 0.5s ease;
+            border-radius: 3px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(247, 147, 26, 0.2);
+            border-left: 4px solid #f7931a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-state {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            color: #ff4444;
+        }
+
+        .timestamp {
+            text-align: center;
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8rem; }
+            .asset-grid { grid-template-columns: 1fr; }
+            .main-container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <h1>⚡ Multi-Asset Correlation Dashboard</h1>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <span>Loading correlation data...</span>
+        </div>
+
+        <div id="dashboard" style="display: none;">
+            <div class="asset-grid">
+                <!-- MSTR Card -->
+                <div class="asset-card mstr">
+                    <div class="asset-header">
+                        <span class="asset-symbol">MSTR</span>
+                        <div>
+                            <span class="asset-price" id="mstr-price">$0</span>
+                            <span class="asset-change" id="mstr-change">0%</span>
+                        </div>
+                    </div>
+                    <div class="correlation-metrics">
+                        <div class="metric-row">
+                            <span>Beta to BTC:</span>
+                            <span id="mstr-beta">0.0x</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>NAV Premium:</span>
+                            <span id="mstr-nav">0%</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Divergence:</span>
+                            <span id="mstr-divergence">0%</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Correlation:</span>
+                            <span id="mstr-correlation">0.0</span>
+                        </div>
+                    </div>
+                    <div class="signal-indicator" id="mstr-signal">
+                        <div class="signal-message" id="mstr-message">Loading MSTR analysis...</div>
+                        <div class="signal-action" id="mstr-action"></div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="mstr-confidence" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ETH Card -->
+                <div class="asset-card eth">
+                    <div class="asset-header">
+                        <span class="asset-symbol">ETH</span>
+                        <div>
+                            <span class="asset-price" id="eth-price">$0</span>
+                            <span class="asset-change" id="eth-change">0%</span>
+                        </div>
+                    </div>
+                    <div class="correlation-metrics">
+                        <div class="metric-row">
+                            <span>ETH/BTC Ratio:</span>
+                            <span id="eth-btc-ratio">0.0000</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>20-MA Ratio:</span>
+                            <span id="eth-ma20">0.0000</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Support Level:</span>
+                            <span id="eth-support">0.050</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Resistance:</span>
+                            <span id="eth-resistance">0.080</span>
+                        </div>
+                    </div>
+                    <div class="signal-indicator" id="eth-signal">
+                        <div class="signal-message" id="eth-message">Loading ETH/BTC analysis...</div>
+                        <div class="signal-action" id="eth-action"></div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="eth-confidence" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Phase Indicator -->
+            <div class="market-phase">
+                <div class="rotation-wheel">
+                    <div class="phase-indicator" id="phase-wheel">🚀</div>
+                </div>
+                <div class="phase-title" id="phase-title">Analyzing Market Phase...</div>
+                <div class="phase-message" id="phase-message">Determining capital rotation patterns...</div>
+                <div class="phase-confidence" id="phase-confidence">Confidence: 0%</div>
+            </div>
+
+            <!-- Active Signals -->
+            <div class="signals-grid" id="signals-grid">
+                <!-- Dynamic signal cards will be populated here -->
+            </div>
+
+            <div class="timestamp" id="timestamp">
+                Last updated: Never
+            </div>
+        </div>
+
+        <div id="error" class="error-state" style="display: none;">
+            <h3>⚠️ Connection Error</h3>
+            <p>Unable to load correlation data. Retrying...</p>
+        </div>
+    </div>
+
+    <script>
+        class CorrelationDashboard {
+            constructor() {
+                this.ws = null;
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.data = null;
+                
+                this.init();
+            }
+
+            async init() {
+                this.connectWebSocket();
+                
+                // Fetch initial data via HTTP as fallback
+                setTimeout(() => {
+                    if (!this.isConnected) {
+                        this.fetchHttpData();
+                    }
+                }, 3000);
+            }
+
+            connectWebSocket() {
+                try {
+                    // Try different WebSocket endpoints
+                    const wsEndpoints = [
+                        `ws://${window.location.host}/ws/correlation`,
+                        `ws://${window.location.host}/ws/microstructure`,
+                        `ws://${window.location.host}/ws`
+                    ];
+
+                    let currentEndpoint = 0;
+                    
+                    const tryConnect = () => {
+                        if (currentEndpoint >= wsEndpoints.length) {
+                            this.showError();
+                            return;
+                        }
+
+                        const wsUrl = wsEndpoints[currentEndpoint];
+                        console.log(`Attempting WebSocket connection to: ${wsUrl}`);
+                        
+                        this.ws = new WebSocket(wsUrl);
+
+                        this.ws.onopen = () => {
+                            console.log('WebSocket connected');
+                            this.isConnected = true;
+                            this.reconnectAttempts = 0;
+                            this.hideError();
+                        };
+
+                        this.ws.onmessage = (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                if (data.type === 'correlation_update' || data.correlation) {
+                                    this.updateDashboard(data.correlation || data);
+                                } else if (data.current_data) {
+                                    // Fallback for basic price data
+                                    this.updateBasicData(data);
+                                }
+                            } catch (e) {
+                                console.error('WebSocket message parsing error:', e);
+                            }
+                        };
+
+                        this.ws.onclose = () => {
+                            console.log('WebSocket disconnected');
+                            this.isConnected = false;
+                            
+                            if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                                setTimeout(() => {
+                                    currentEndpoint++;
+                                    tryConnect();
+                                }, 2000 * (this.reconnectAttempts + 1));
+                                this.reconnectAttempts++;
+                            } else {
+                                this.fetchHttpData(); // Fallback to HTTP
+                            }
+                        };
+
+                        this.ws.onerror = (error) => {
+                            console.error('WebSocket error:', error);
+                            currentEndpoint++;
+                            setTimeout(tryConnect, 1000);
+                        };
+                    };
+
+                    tryConnect();
+                    
+                } catch (error) {
+                    console.error('WebSocket connection error:', error);
+                    this.fetchHttpData();
+                }
+            }
+
+            async fetchHttpData() {
+                try {
+                    // Try different HTTP endpoints
+                    const endpoints = [
+                        '/api/correlation',
+                        '/api/multi-asset',
+                        '/api/microstructure'
+                    ];
+
+                    for (const endpoint of endpoints) {
+                        try {
+                            const response = await fetch(endpoint);
+                            if (response.ok) {
+                                const data = await response.json();
+                                this.updateDashboard(data);
+                                this.hideError();
+                                
+                                // Set up polling
+                                setTimeout(() => this.fetchHttpData(), 10000); // 10 second polling
+                                return;
+                            }
+                        } catch (e) {
+                            console.log(`Endpoint ${endpoint} failed:`, e);
+                        }
+                    }
+                    
+                    // If all endpoints fail, show demo data
+                    this.showDemoData();
+                    
+                } catch (error) {
+                    console.error('HTTP fetch error:', error);
+                    this.showDemoData();
+                }
+            }
+
+            updateDashboard(data) {
+                this.data = data;
+                this.hideLoading();
+                
+                try {
+                    // Update MSTR data
+                    if (data.mstr) {
+                        this.updateMSTRCard(data.mstr);
+                    }
+                    
+                    // Update ETH data
+                    if (data.eth_btc) {
+                        this.updateETHCard(data.eth_btc);
+                    }
+                    
+                    // Update market phase
+                    if (data.market_phase) {
+                        this.updateMarketPhase(data.market_phase);
+                    }
+                    
+                    // Update signals
+                    this.updateSignals(data);
+                    
+                    // Update timestamp
+                    this.updateTimestamp(data.last_updated);
+                    
+                } catch (error) {
+                    console.error('Dashboard update error:', error);
+                }
+            }
+
+            updateMSTRCard(mstrData) {
+                try {
+                    // Update price (placeholder - need actual price data)
+                    document.getElementById('mstr-price').textContent = '$' + (mstrData.price || '0').toLocaleString();
+                    
+                    // Update metrics
+                    const beta = mstrData.beta || 0;
+                    const navPremium = mstrData.nav_premium || 0;
+                    const divergence = mstrData.divergence || 0;
+                    const correlation = mstrData.correlation || 0;
+                    
+                    document.getElementById('mstr-beta').textContent = beta.toFixed(1) + 'x';
+                    document.getElementById('mstr-nav').textContent = navPremium.toFixed(1) + '%';
+                    document.getElementById('mstr-divergence').textContent = divergence.toFixed(1) + '%';
+                    document.getElementById('mstr-correlation').textContent = correlation.toFixed(2);
+                    
+                    // Update signal
+                    if (mstrData.signals && mstrData.signals.length > 0) {
+                        const signal = mstrData.signals[0];
+                        const signalElement = document.getElementById('mstr-signal');
+                        
+                        document.getElementById('mstr-message').textContent = signal.message;
+                        document.getElementById('mstr-action').textContent = signal.action;
+                        
+                        // Update confidence bar
+                        const confidence = (signal.confidence || 0) * 100;
+                        document.getElementById('mstr-confidence').style.width = confidence + '%';
+                        
+                        // Update signal class
+                        signalElement.className = 'signal-indicator ' + this.getSignalClass(signal.type);
+                    }
+                } catch (error) {
+                    console.error('MSTR update error:', error);
+                }
+            }
+
+            updateETHCard(ethData) {
+                try {
+                    // Update metrics
+                    const ratio = ethData.current_ratio || 0;
+                    const ma20 = ethData.ma_20 || 0;
+                    const support = ethData.support_level || 0.050;
+                    const resistance = ethData.resistance_level || 0.080;
+                    
+                    document.getElementById('eth-btc-ratio').textContent = ratio.toFixed(4);
+                    document.getElementById('eth-ma20').textContent = ma20.toFixed(4);
+                    document.getElementById('eth-support').textContent = support.toFixed(3);
+                    document.getElementById('eth-resistance').textContent = resistance.toFixed(3);
+                    
+                    // Update signal
+                    if (ethData.signals && ethData.signals.length > 0) {
+                        const signal = ethData.signals[0];
+                        const signalElement = document.getElementById('eth-signal');
+                        
+                        document.getElementById('eth-message').textContent = signal.message;
+                        document.getElementById('eth-action').textContent = signal.action;
+                        
+                        // Update confidence bar
+                        const confidence = (signal.confidence || 0) * 100;
+                        document.getElementById('eth-confidence').style.width = confidence + '%';
+                        
+                        // Update signal class
+                        signalElement.className = 'signal-indicator ' + this.getSignalClass(signal.type);
+                    }
+                } catch (error) {
+                    console.error('ETH update error:', error);
+                }
+            }
+
+            updateMarketPhase(phaseData) {
+                try {
+                    const phase = phaseData.phase || 'neutral';
+                    const message = phaseData.message || 'No clear pattern';
+                    const confidence = (phaseData.confidence || 0) * 100;
+                    
+                    document.getElementById('phase-title').textContent = phase.toUpperCase().replace('_', ' ');
+                    document.getElementById('phase-message').textContent = message;
+                    document.getElementById('phase-confidence').textContent = `Confidence: ${confidence.toFixed(0)}%`;
+                    
+                    // Update phase wheel emoji
+                    const phaseEmojis = {
+                        'risk_on': '🚀',
+                        'alt_season': '🌟',
+                        'peak_euphoria': '🚨',
+                        'flight_to_quality': '🛡️',
+                        'neutral': '⚖️',
+                        'error': '❌'
+                    };
+                    
+                    document.getElementById('phase-wheel').textContent = phaseEmojis[phase] || '⚖️';
+                    
+                } catch (error) {
+                    console.error('Phase update error:', error);
+                }
+            }
+
+            updateSignals(data) {
+                try {
+                    const signalsGrid = document.getElementById('signals-grid');
+                    signalsGrid.innerHTML = '';
+                    
+                    const allSignals = [];
+                    
+                    // Collect all signals
+                    if (data.mstr && data.mstr.signals) {
+                        data.mstr.signals.forEach(signal => {
+                            allSignals.push({...signal, asset: 'MSTR'});
+                        });
+                    }
+                    
+                    if (data.eth_btc && data.eth_btc.signals) {
+                        data.eth_btc.signals.forEach(signal => {
+                            allSignals.push({...signal, asset: 'ETH/BTC'});
+                        });
+                    }
+                    
+                    // Create signal cards
+                    allSignals.forEach(signal => {
+                        const card = document.createElement('div');
+                        card.className = 'signal-card';
+                        
+                        const confidence = (signal.confidence || 0) * 100;
+                        
+                        card.innerHTML = `
+                            <h4>${signal.asset} - ${signal.type.toUpperCase()}</h4>
+                            <div class="signal-message">${signal.message}</div>
+                            <div class="signal-action">${signal.action}</div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: ${confidence}%"></div>
+                            </div>
+                        `;
+                        
+                        signalsGrid.appendChild(card);
+                    });
+                    
+                } catch (error) {
+                    console.error('Signals update error:', error);
+                }
+            }
+
+            updateTimestamp(timestamp) {
+                if (timestamp) {
+                    const date = new Date(timestamp * 1000);
+                    document.getElementById('timestamp').textContent = 
+                        'Last updated: ' + date.toLocaleString();
+                }
+            }
+
+            getSignalClass(signalType) {
+                const classMap = {
+                    'opportunity': 'bullish',
+                    'leading': 'bullish',
+                    'support': 'bullish',
+                    'warning': 'warning',
+                    'resistance': 'bearish',
+                    'lagging': 'bearish',
+                    'neutral': 'neutral',
+                    'error': 'warning'
+                };
+                
+                return classMap[signalType] || 'neutral';
+            }
+
+            updateBasicData(data) {
+                // Fallback for basic price data
+                try {
+                    if (data.current_data && data.current_data.price) {
+                        // This would be BTC data, but we can show it as context
+                        console.log('Basic BTC price:', data.current_data.price);
+                    }
+                    this.hideLoading();
+                } catch (error) {
+                    console.error('Basic data update error:', error);
+                }
+            }
+
+            showDemoData() {
+                // Show demo/placeholder data when connection fails
+                const demoData = {
+                    mstr: {
+                        beta: 2.3,
+                        nav_premium: 15.2,
+                        divergence: 2.1,
+                        correlation: 0.85,
+                        signals: [{
+                            type: 'neutral',
+                            message: '💤 DEMO MODE - MSTR tracking BTC normally',
+                            action: 'Live data unavailable - showing demo',
+                            confidence: 0.3
+                        }]
+                    },
+                    eth_btc: {
+                        current_ratio: 0.0632,
+                        ma_20: 0.0628,
+                        support_level: 0.050,
+                        resistance_level: 0.080,
+                        signals: [{
+                            type: 'neutral',
+                            message: '💤 DEMO MODE - ETH/BTC in normal range',
+                            action: 'Live data unavailable - showing demo',
+                            confidence: 0.3
+                        }]
+                    },
+                    market_phase: {
+                        phase: 'neutral',
+                        message: '💤 Demo mode - live analysis unavailable',
+                        confidence: 0.3
+                    },
+                    last_updated: Math.floor(Date.now() / 1000)
+                };
+                
+                this.updateDashboard(demoData);
+            }
+
+            hideLoading() {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            }
+
+            showError() {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('dashboard').style.display = 'none';
+            }
+
+            hideError() {
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            }
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CorrelationDashboard();
+        });
+    </script>
+</body>
+</html>
