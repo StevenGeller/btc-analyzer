@@ -990,6 +990,8 @@
                         </div>
                     </div>
                     <div class="network-stats" id="networkStats">Hash: -- | Tx: --</div>
+                    <div style="margin-top: 10px; font-size: 0.7rem; color: #888;" id="networkInsight">Analyzing...</div>
+                    <div style="margin-top: 5px; font-size: 0.65rem; color: #666; line-height: 1.3;" id="networkBreakdown"></div>
                 </div>
             </div>
         </div>
@@ -1894,12 +1896,14 @@
                     }
                 }
                 
-                // Update Network Health
+                // Update Network Health with detailed insights
                 if (data.network_health) {
                     const networkScore = document.getElementById('networkScore');
                     const networkStatus = document.getElementById('networkStatus');
                     const healthFill = document.getElementById('healthFill');
                     const networkStats = document.getElementById('networkStats');
+                    const networkInsight = document.getElementById('networkInsight');
+                    const networkBreakdown = document.getElementById('networkBreakdown');
                     
                     if (networkScore) {
                         networkScore.textContent = `${data.network_health.health_score.toFixed(0)}/100`;
@@ -1912,13 +1916,47 @@
                     // Update health bar
                     if (healthFill) {
                         healthFill.style.width = `${data.network_health.health_score}%`;
+                        healthFill.style.backgroundColor = data.network_health.color;
                     }
                     
-                    // Show simplified stats
+                    // Show detailed stats
                     if (networkStats) {
-                        const hashRate = (data.network_health.hash_rate / 1e12).toFixed(1);  // Convert to TH/s
+                        // Use EH/s if available, otherwise convert from H/s
+                        const hashRate = data.network_health.hash_rate_eh || (data.network_health.hash_rate / 1e18);
                         const txCount = (data.network_health.daily_transactions / 1e3).toFixed(0);  // Show in K
-                        networkStats.textContent = `Hash: ${hashRate} TH/s | Tx: ${txCount}K`;
+                        const mempool = data.network_health.mempool_size || 0;
+                        const blockTime = data.network_health.minutes_between_blocks || 10;
+                        networkStats.textContent = `Hash: ${hashRate.toFixed(1)} EH/s | Tx/day: ${txCount}K | Mempool: ${(mempool/1000).toFixed(1)}K | Block: ${blockTime.toFixed(1)}min`;
+                    }
+                    
+                    // Show main insight
+                    if (networkInsight && data.network_health.main_insight) {
+                        networkInsight.textContent = data.network_health.main_insight;
+                        networkInsight.style.color = data.network_health.health_score > 60 ? '#00cc66' : 
+                                                     data.network_health.health_score > 40 ? '#ffcc00' : '#ff6600';
+                    }
+                    
+                    // Show component breakdown
+                    if (networkBreakdown && data.network_health.components) {
+                        const comp = data.network_health.components;
+                        const insights = data.network_health.insights || [];
+                        let breakdownHTML = `
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px;">
+                                <span>Hash: ${comp.hash_score.toFixed(0)}/40</span>
+                                <span>Txs: ${comp.tx_score.toFixed(0)}/30</span>
+                                <span>Mempool: ${comp.mempool_score.toFixed(0)}/15</span>
+                                <span>Blocks: ${comp.block_score.toFixed(0)}/15</span>
+                            </div>
+                        `;
+                        
+                        // Add top insights if available
+                        if (insights.length > 0) {
+                            breakdownHTML += '<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #333;">';
+                            breakdownHTML += insights.slice(0, 2).join('<br>');
+                            breakdownHTML += '</div>';
+                        }
+                        
+                        networkBreakdown.innerHTML = breakdownHTML;
                     }
                 }
                 

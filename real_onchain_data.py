@@ -341,48 +341,168 @@ class RealOnChainData:
             }
     
     async def get_network_metrics(self) -> Dict[str, Any]:
-        """Get real network health metrics"""
+        """Get real network health metrics with detailed insights"""
         try:
             session = await self.get_session()
+            
+            # Try to get hash rate from mempool.space for accuracy
+            hash_rate_eh = 0
+            try:
+                hashrate_url = "https://mempool.space/api/v1/mining/hashrate/3d"
+                async with session.get(hashrate_url, timeout=5) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        # Convert from H/s to EH/s (ExaHash = 1e18)
+                        hash_rate_eh = data.get('currentHashrate', 0) / 1e18
+            except:
+                pass
+            
+            # Get other stats from blockchain.info
             stats_url = "https://api.blockchain.info/stats"
             
             async with session.get(stats_url, timeout=10) as response:
                 if response.status == 200:
                     stats = await response.json()
                     
-                    hash_rate = stats.get('hash_rate', 0)
-                    n_tx = stats.get('n_tx', 0)
+                    # If we didn't get hash rate from mempool.space, estimate from difficulty
+                    if hash_rate_eh == 0:
+                        # blockchain.info hash_rate is wrong, estimate from difficulty
+                        # Network hashrate ≈ difficulty * 2^32 / 600
+                        difficulty = stats.get('difficulty', 0)
+                        if difficulty > 0:
+                            # This gives us H/s, convert to EH/s
+                            estimated_hashrate = (difficulty * 2**32 / 600)
+                            hash_rate_eh = estimated_hashrate / 1e18
+                        else:
+                            hash_rate_eh = 900  # Fallback estimate
+                    
+                    n_tx = stats.get('n_tx', 0)  # Daily transactions
                     difficulty = stats.get('difficulty', 0)
+                    mempool_size = stats.get('n_unconfirmed', 0)
+                    blocks_mined_24h = stats.get('n_blocks_mined', 144)  # Expected 144 per day
+                    minutes_between_blocks = stats.get('minutes_between_blocks', 10)
                     
-                    # Calculate health score based on real metrics
-                    # Normalize each metric and combine
-                    hash_score = min(100, (hash_rate / 1e12) * 10)  # 10 points per TH/s
-                    tx_score = min(100, (n_tx / 10000) * 10)  # 10 points per 10k txs
+                    # Calculate component scores with detailed breakdown
+                    # Hash Rate Score (0-40 points) - Based on EH/s
+                    hash_score = min(40, (hash_rate_eh / 1000) * 40)  # 1000 EH/s = perfect score
+                    hash_insight = ""
+                    if hash_rate_eh > 900:
+                        hash_insight = "Hash rate near all-time highs (~1000 EH/s) - Maximum security"
+                    elif hash_rate_eh > 700:
+                        hash_insight = "Strong hash rate (700+ EH/s) - Network very secure"
+                    elif hash_rate_eh > 500:
+                        hash_insight = "Good hash rate (500+ EH/s) - Network secure"
+                    elif hash_rate_eh > 300:
+                        hash_insight = "Moderate hash rate (300+ EH/s) - Acceptable security"
+                    else:
+                        hash_insight = f"Lower hash rate ({hash_rate_eh:.0f} EH/s) - Monitor for changes"
                     
-                    health_score = (hash_score + tx_score) / 2
+                    # Transaction Volume Score (0-30 points)
+                    tx_score = min(30, (n_tx / 400000) * 30)  # 400k txs/day = perfect
+                    tx_insight = ""
+                    if n_tx > 350000:
+                        tx_insight = "High transaction volume - Strong adoption"
+                    elif n_tx > 250000:
+                        tx_insight = "Normal transaction volume - Steady usage"
+                    elif n_tx > 150000:
+                        tx_insight = "Moderate volume - Average activity"
+                    else:
+                        tx_insight = "Low volume - Reduced network activity"
                     
+                    # Mempool Score (0-15 points)
+                    # Lower mempool = better (less congestion)
+                    mempool_score = max(0, 15 - (mempool_size / 10000) * 5)
+                    mempool_insight = ""
+                    if mempool_size < 5000:
+                        mempool_insight = "Clear mempool - Fast confirmations"
+                    elif mempool_size < 20000:
+                        mempool_insight = "Normal mempool - Standard fees"
+                    elif mempool_size < 50000:
+                        mempool_insight = "Elevated mempool - Higher fees expected"
+                    else:
+                        mempool_insight = "Congested mempool - High fees & delays"
+                    
+                    # Block Time Score (0-15 points)
+                    # Closer to 10 minutes = better
+                    block_time_deviation = abs(10 - minutes_between_blocks)
+                    block_score = max(0, 15 - block_time_deviation * 3)
+                    block_insight = ""
+                    if block_time_deviation < 1:
+                        block_insight = "Perfect block timing - Network optimal"
+                    elif block_time_deviation < 3:
+                        block_insight = "Good block timing - Network stable"
+                    elif block_time_deviation < 5:
+                        block_insight = "Variable block times - Minor delays"
+                    else:
+                        block_insight = "Irregular blocks - Network adjusting"
+                    
+                    # Total health score
+                    health_score = hash_score + tx_score + mempool_score + block_score
+                    
+                    # Generate insights array
+                    insights = []
+                    
+                    # Primary insight based on weakest component
+                    if hash_score < 20:
+                        insights.append(f"⚠️ {hash_insight}")
+                    if tx_score < 15:
+                        insights.append(f"📊 {tx_insight}")
+                    if mempool_score < 7.5:
+                        insights.append(f"🔄 {mempool_insight}")
+                    if block_score < 7.5:
+                        insights.append(f"⏱️ {block_insight}")
+                    
+                    # If no major issues, add positive insights
+                    if len(insights) == 0:
+                        if hash_score >= 30:
+                            insights.append(f"✅ {hash_insight}")
+                        if tx_score >= 20:
+                            insights.append(f"📈 {tx_insight}")
+                    
+                    # Overall status
                     if health_score > 80:
                         status = "EXCELLENT"
                         color = "#00ff00"
+                        main_insight = "Network operating at peak performance"
                     elif health_score > 60:
                         status = "GOOD"
                         color = "#00cc66"
+                        main_insight = "Network healthy with strong fundamentals"
                     elif health_score > 40:
                         status = "MODERATE"
                         color = "#ffcc00"
+                        main_insight = "Network stable but below optimal levels"
                     else:
                         status = "WEAK"
                         color = "#ff6600"
+                        main_insight = "Network showing signs of stress"
                     
                     return {
                         'health_score': round(health_score, 1),
                         'status': status,
                         'color': color,
-                        'hash_rate': hash_rate,
+                        'hash_rate': hash_rate_eh * 1e18,  # Return in H/s for compatibility
+                        'hash_rate_eh': round(hash_rate_eh, 1),  # ExaHash/s
                         'daily_transactions': n_tx,
                         'difficulty': difficulty,
-                        'data_source': 'blockchain.info',
-                        'description': f"Network {status.lower()} - {n_tx:,} daily txs"
+                        'mempool_size': mempool_size,
+                        'minutes_between_blocks': round(minutes_between_blocks, 1),
+                        'components': {
+                            'hash_score': round(hash_score, 1),
+                            'tx_score': round(tx_score, 1),
+                            'mempool_score': round(mempool_score, 1),
+                            'block_score': round(block_score, 1)
+                        },
+                        'insights': insights,
+                        'main_insight': main_insight,
+                        'breakdown': {
+                            'hash_rate': f"{hash_score:.0f}/40 pts - {hash_insight}",
+                            'transactions': f"{tx_score:.0f}/30 pts - {tx_insight}",
+                            'mempool': f"{mempool_score:.0f}/15 pts - {mempool_insight}",
+                            'block_time': f"{block_score:.0f}/15 pts - {block_insight}"
+                        },
+                        'data_sources': ['mempool.space', 'blockchain.info'],
+                        'description': f"{main_insight} (Score: {health_score:.0f}/100)"
                     }
             
         except Exception as e:
