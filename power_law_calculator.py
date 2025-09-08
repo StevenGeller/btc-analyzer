@@ -18,18 +18,87 @@ class BitcoinPowerLaw:
     # Bitcoin genesis block: January 3, 2009
     GENESIS_DATE = datetime(2009, 1, 3)
     
+    # Bitcoin halving dates (historical and projected)
+    HALVING_DATES = [
+        datetime(2012, 11, 28),  # First halving
+        datetime(2016, 7, 9),    # Second halving
+        datetime(2020, 5, 11),   # Third halving
+        datetime(2024, 4, 19),   # Fourth halving (actual)
+        datetime(2028, 4, 1),    # Fifth halving (projected)
+    ]
+    
     # Power Law parameters (fitted to historical data)
     # These are commonly cited parameters for the Bitcoin power law
     A = 10**(-17.01)  # Scaling factor
     N = 5.82  # Power exponent
     
-    # Support and resistance band multipliers
-    RESISTANCE_MULTIPLIER = 3.2  # Upper band (overvalued)
-    SUPPORT_MULTIPLIER = 0.35  # Lower band (undervalued)
+    # Support and resistance band multipliers (based on historical data)
+    # Research shows bottoms consistently occur at ~0.42x (58% below fair value)
+    # Tops can reach 3.2x in extreme bubbles, but intermediate levels matter
+    RESISTANCE_MULTIPLIER = 3.2  # Extreme bubble top
+    SUPPORT_MULTIPLIER = 0.42  # Historical bottom (~58% below fair value)
+    
+    # Intermediate zone multipliers for better granularity
+    ZONE_MULTIPLIERS = {
+        'deep_undervalued': 0.42,   # Historical bottom
+        'undervalued': 0.7,          # Strong buy zone
+        'fair_value_low': 0.85,      # Below fair value
+        'fair_value': 1.0,           # Power law trend line
+        'fair_value_high': 1.15,     # Slightly above fair
+        'overheated': 1.5,           # Getting expensive
+        'bubble_territory': 2.0,     # Clear bubble
+        'extreme_bubble': 3.2        # Historical max deviation
+    }
     
     def __init__(self):
         self.last_calculation = None
         self.cached_result = None
+    
+    def get_halving_context(self, date=None):
+        """Calculate halving cycle context"""
+        if date is None:
+            date = datetime.now()
+        
+        # Find the last and next halving
+        last_halving = None
+        next_halving = None
+        
+        for halving_date in self.HALVING_DATES:
+            if halving_date <= date:
+                last_halving = halving_date
+            elif next_halving is None:
+                next_halving = halving_date
+                break
+        
+        result = {}
+        
+        if last_halving:
+            days_since_halving = (date - last_halving).days
+            result['days_since_halving'] = days_since_halving
+            result['last_halving'] = last_halving.strftime('%Y-%m-%d')
+        
+        if next_halving:
+            days_to_halving = (next_halving - date).days
+            result['days_to_halving'] = days_to_halving
+            result['next_halving'] = next_halving.strftime('%Y-%m-%d')
+            
+            # Calculate position in 4-year cycle (approximately 1461 days)
+            if last_halving:
+                total_cycle_days = (next_halving - last_halving).days
+                cycle_progress = days_since_halving / total_cycle_days
+                result['cycle_position'] = round(cycle_progress * 100, 1)
+                
+                # Determine cycle phase
+                if cycle_progress < 0.25:
+                    result['cycle_phase'] = 'Post-halving accumulation'
+                elif cycle_progress < 0.5:
+                    result['cycle_phase'] = 'Mid-cycle rally'
+                elif cycle_progress < 0.75:
+                    result['cycle_phase'] = 'Late-cycle expansion'
+                else:
+                    result['cycle_phase'] = 'Pre-halving anticipation'
+        
+        return result
         
     def days_since_genesis(self, date=None):
         """Calculate days since Bitcoin genesis block"""
@@ -80,34 +149,80 @@ class BitcoinPowerLaw:
             # Calculate deviation from fair value
             deviation_pct = ((current_price - fair_value) / fair_value) * 100
             
-            # Determine status
-            if current_price > resistance:
-                status = "EXTREMELY_OVERVALUED"
-                color = "#ff0000"  # Red
-                signal = "🔴"
-            elif current_price > fair_value * 1.5:
-                status = "OVERVALUED"
-                color = "#ff6600"  # Orange
-                signal = "🟠"
-            elif current_price > fair_value:
-                status = "ABOVE_FAIR_VALUE"
-                color = "#ffcc00"  # Yellow
-                signal = "🟡"
-            elif current_price > support:
-                status = "BELOW_FAIR_VALUE"
-                color = "#00cc66"  # Light green
-                signal = "🟢"
-            else:
-                status = "UNDERVALUED"
+            # Enhanced zone classification with more granularity
+            price_to_fair_ratio = current_price / fair_value
+            
+            # Determine zone and status based on comprehensive boundaries
+            if price_to_fair_ratio < self.ZONE_MULTIPLIERS['deep_undervalued']:
+                zone = "DEEP_UNDERVALUED"
+                status = "Extreme Undervaluation"
                 color = "#00ff00"  # Bright green
+                signal = "🟢🟢🟢"
+                action_hint = "Historical bottom zone"
+            elif price_to_fair_ratio < self.ZONE_MULTIPLIERS['undervalued']:
+                zone = "UNDERVALUED"
+                status = "Strong Buy Zone"
+                color = "#00dd00"  # Green
+                signal = "🟢🟢"
+                action_hint = "Accumulation opportunity"
+            elif price_to_fair_ratio < self.ZONE_MULTIPLIERS['fair_value_low']:
+                zone = "BELOW_FAIR"
+                status = "Below Fair Value"
+                color = "#66cc66"  # Light green
                 signal = "🟢"
+                action_hint = "Good value zone"
+            elif price_to_fair_ratio < self.ZONE_MULTIPLIERS['fair_value']:
+                zone = "FAIR_VALUE_LOW"
+                status = "Near Fair Value"
+                color = "#99cc00"  # Yellow-green
+                signal = "🟡"
+                action_hint = "Approaching fair value"
+            elif price_to_fair_ratio < self.ZONE_MULTIPLIERS['fair_value_high']:
+                zone = "FAIR_VALUE"
+                status = "Fair Value Zone"
+                color = "#cccc00"  # Yellow
+                signal = "🟡"
+                action_hint = "Fairly valued"
+            elif price_to_fair_ratio < self.ZONE_MULTIPLIERS['overheated']:
+                zone = "ABOVE_FAIR"
+                status = "Above Fair Value"
+                color = "#ffcc00"  # Light orange
+                signal = "🟠"
+                action_hint = "Getting expensive"
+            elif price_to_fair_ratio < self.ZONE_MULTIPLIERS['bubble_territory']:
+                zone = "OVERHEATED"
+                status = "Overheated Zone"
+                color = "#ff9900"  # Orange
+                signal = "🟠"
+                action_hint = "Caution advised"
+            elif price_to_fair_ratio < self.ZONE_MULTIPLIERS['extreme_bubble']:
+                zone = "BUBBLE"
+                status = "Bubble Territory"
+                color = "#ff6600"  # Dark orange
+                signal = "🔴"
+                action_hint = "High risk zone"
+            else:
+                zone = "EXTREME_BUBBLE"
+                status = "Extreme Bubble"
+                color = "#ff0000"  # Red
+                signal = "🔴🔴"
+                action_hint = "Historical top zone"
             
             # Calculate position within band (0 to 1)
             band_range = resistance - support
             position_in_band = (current_price - support) / band_range
             position_in_band = max(0, min(1, position_in_band))  # Clamp to 0-1
             
+            # Get halving cycle context
+            halving_context = self.get_halving_context(now)
+            
+            # Calculate historical context percentages
+            deviation_from_support_pct = ((current_price - support) / support) * 100
+            deviation_from_resistance_pct = ((resistance - current_price) / current_price) * 100
+            
             return {
+                # Core metrics
+                'zone': zone,
                 'status': status,
                 'deviation_percent': round(deviation_pct, 2),
                 'fair_value': round(fair_value, 2),
@@ -117,8 +232,32 @@ class BitcoinPowerLaw:
                 'position_in_band': round(position_in_band, 3),
                 'color': color,
                 'signal': signal,
+                'action_hint': action_hint,
+                
+                # Enhanced metrics
+                'price_to_fair_ratio': round(price_to_fair_ratio, 3),
+                'deviation_from_support': round(deviation_from_support_pct, 1),
+                'deviation_from_resistance': round(deviation_from_resistance_pct, 1),
+                
+                # Zone boundaries for visualization
+                'zones': {
+                    'deep_undervalued': round(fair_value * self.ZONE_MULTIPLIERS['deep_undervalued'], 2),
+                    'undervalued': round(fair_value * self.ZONE_MULTIPLIERS['undervalued'], 2),
+                    'fair_value_low': round(fair_value * self.ZONE_MULTIPLIERS['fair_value_low'], 2),
+                    'fair_value': round(fair_value, 2),
+                    'fair_value_high': round(fair_value * self.ZONE_MULTIPLIERS['fair_value_high'], 2),
+                    'overheated': round(fair_value * self.ZONE_MULTIPLIERS['overheated'], 2),
+                    'bubble': round(fair_value * self.ZONE_MULTIPLIERS['bubble_territory'], 2),
+                    'extreme_bubble': round(fair_value * self.ZONE_MULTIPLIERS['extreme_bubble'], 2)
+                },
+                
+                # Halving cycle context
+                'cycle_context': halving_context,
+                
+                # Metadata
                 'days_since_genesis': power_law['days_since_genesis'],
-                'calculation_time': now.isoformat()
+                'calculation_time': now.isoformat(),
+                'model_confidence': 0.95  # R² value from research
             }
             
         except Exception as e:

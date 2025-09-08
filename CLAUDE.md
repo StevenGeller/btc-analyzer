@@ -15,9 +15,13 @@ python working_app.py
 # System testing
 python final_test.py
 python verify_data.py
-
-# Dashboard testing
 python test_dashboard.py
+python test_onchain_endpoints.py
+
+# Dashboard testing with specific modules  
+python test_final_display.py
+python test_all_dashboard_sections.py
+python test_network_insights.py
 ```
 
 ### Application Access
@@ -30,21 +34,35 @@ The FastAPI application runs on `http://0.0.0.0:8000` by default with the unifie
 **Database Layer** (`database.py`)
 - SQLite database with WAL mode for concurrent access
 - 15+ optimized tables for financial data storage
-- Tables: `price_data`, `indicators`, `market_metrics`, `whale_trades`, `liquidation_events`, `funding_rates`
+- Tables: `price_data`, `indicators`, `market_metrics`, `whale_trades`, `liquidation_events`, `funding_rates`, `exchange_prices`
 - Automated 30-day data cleanup and integrity validation
+- PRAGMA optimizations: WAL journal mode, NORMAL synchronous, 10000 cache size
 
-**Data Fetching** (`strategy_fetcher.py`, `real_whale_tracker.py`)
-- Multi-source API integration (Binance, CoinGecko, Alternative.me, Blockchain.info, Mempool.space)
-- Asynchronous data collection with rate limiting
+**Configuration** (`config.py`)
+- Centralized configuration for all API endpoints and rate limits
+- Cache duration settings for different data types
+- Validation rules for price ranges and data integrity
+- Exchange addresses for whale tracking
+
+**Data Fetching** 
+- `strategy_fetcher.py` - MSTR data fetcher with 30-minute periodic updates
+- `real_whale_tracker.py` - On-chain whale transaction monitoring
+- `real_onchain_data.py` - Blockchain.info and Mempool.space integration
+- Multi-source API integration with aggressive fallback chains
 - Real-time WebSocket streaming capabilities
-- Aggressive fallback chains across multiple sources
 
-**Market Analysis** (`multi_asset_analyzer.py`, `pattern_recognition.py`, `microstructure_integration.py`)
-- Composite scoring system combining price action, momentum, sentiment, and volume
-- Technical indicators (RSI, MACD, Bollinger Bands)
-- Wyckoff pattern detection and divergence analysis
-- MSTR/BTC correlation with NAV premium tracking
-- Order flow analysis with whale bias detection
+**Market Analysis**
+- `multi_asset_analyzer.py` - Cross-asset correlation (MSTR, ETH, SOL)
+- `pattern_recognition.py` - Wyckoff patterns and divergence detection
+- `microstructure_integration.py` - Order flow and market depth analysis
+- `power_law_calculator.py` - Bitcoin fair value model calculations
+- Composite scoring system combining multiple market factors
+
+**System Infrastructure**
+- `monitoring.py` - Health checks and data quality monitoring
+- `backup_manager.py` - Automated hourly database backups
+- `cache_manager.py` - Intelligent caching with TTL management
+- `data_validator.py` - Data validation and integrity checks
 
 ### Data Flow Architecture
 
@@ -66,7 +84,19 @@ Rate Limiting → Validation → WAL Storage → Analysis → Real-time Updates
 - `/api/enhanced` - Analysis with microstructure insights
 - `/api/whale` - On-chain whale tracking
 - `/api/correlation` - Multi-asset correlation data
+- `/api/power-law` - Bitcoin Power Law analysis
+- `/api/onchain` - Comprehensive on-chain analytics
+- `/api/microstructure` - Market microstructure dashboard data
+- `/api/backup/status` - Backup system status
+- `/api/backup/create` - Manual backup trigger
+- `/api/backup/list` - List available backups
 - `/health` - System health monitoring
+
+### Frontend Dashboards
+- `enhanced_unified_dashboard.html` - Main professional interface (primary)
+- `unified_dashboard.html` - Standard unified dashboard (fallback)
+- `correlation_dashboard.html` - Multi-asset correlation view
+- `microstructure_dashboard.html` - Advanced order flow analysis
 
 ## Critical Implementation Requirements
 
@@ -85,7 +115,7 @@ This system **NEVER** returns mock or placeholder data:
 
 ### Rate Limiting Strategy (from `config.py`)
 - Binance: Unlimited (primary source)
-- Alternative.me: Unlimited
+- Alternative.me: Unlimited  
 - CoinGecko: 30 calls/minute
 - Blockchain.info: Conservative rate limiting
 - Mempool.space: Conservative rate limiting
@@ -103,37 +133,30 @@ This system **NEVER** returns mock or placeholder data:
 - Automatic cleanup of data older than 30 days
 - Transaction rollback on errors
 
-## Application Structure
+## Background Services
 
-### Main Application
-- `working_app.py` - Production FastAPI application serving unified dashboard
-- Integrates all system components: multi-asset analysis, microstructure, whale tracking
-- CORS enabled for frontend integration
+The application starts several background services on startup:
+- **MSTR Data Fetcher** - Updates every 30 minutes via `periodic_update_task()`
+- **Automated Backup** - Hourly database backups via `start_backup_service()`
+- **Data Quality Monitor** - Continuous monitoring via `monitor_data_quality()`
 
-### Archived Variants (in `/archive/`)
-- `app.py` - Basic market analysis
-- `professional_app.py` - Full-featured with advanced analysis
-- `simple_app.py` - Lightweight price tracking
+All background tasks are properly tracked in `background_tasks` set and cancelled on shutdown.
 
-### Key Modules
-- `database.py` - Database operations and schema management
-- `config.py` - Centralized configuration and constants
-- `strategy_fetcher.py` - MSTR data fetching with caching
-- `multi_asset_analyzer.py` - Cross-asset correlation analysis
-- `real_whale_tracker.py` - On-chain whale movement tracking
-- `pattern_recognition.py` - Technical pattern detection
-- `microstructure_integration.py` - Market microstructure analysis
+## Testing Strategy
 
-### Frontend Dashboards
-- `unified_dashboard.html` - Main professional interface
-- `correlation_dashboard.html` - Multi-asset correlation view
-- `microstructure_dashboard.html` - Advanced order flow analysis
+Different test scripts verify specific functionality:
+- `final_test.py` - Comprehensive system integration test
+- `verify_data.py` - Data integrity and validation checks
+- `test_dashboard.py` - Dashboard display and metrics verification
+- `test_onchain_endpoints.py` - On-chain API endpoint testing
+- `test_websocket.py` - WebSocket connection and streaming tests
 
 ## Development Notes
 
 - The codebase prioritizes real market data integrity over all other concerns
-- WebSocket integration provides real-time updates to frontend dashboards
+- WebSocket integration provides real-time updates to frontend dashboards  
 - Professional features include institutional-quality market microstructure analysis
 - All APIs are integrated without requiring API keys for basic functionality
 - Background tasks are properly managed with cleanup handlers
 - System includes comprehensive monitoring and health checks
+- Use of singleton patterns for managers (get_multi_asset_manager, get_microstructure_manager, etc.)

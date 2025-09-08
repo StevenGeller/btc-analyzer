@@ -1035,13 +1035,13 @@
                     <span>Multi-Asset Correlation Signals</span>
                 </h2>
                 <div id="correlationAnalysis" class="multi-asset-grid">
-                    <!-- MSTR Premium -->
-                    <div class="asset-card">
+                    <!-- MSTR Premium with Advanced Analytics -->
+                    <div class="asset-card" style="grid-column: span 2;">
                         <div class="asset-header">
                             <span class="asset-icon">📈</span>
-                            <span class="asset-name">MSTR</span>
+                            <span class="asset-name">MSTR Advanced Analytics</span>
                         </div>
-                        <div class="asset-value" id="mstrPremium">--%</div>
+                        <div class="asset-value" id="mstrPremium" style="margin-bottom: 10px;">--%</div>
                         <div class="asset-label">NAV Premium</div>
                         <div class="asset-indicator">
                             <div class="premium-bar">
@@ -1054,7 +1054,7 @@
                                 <span>100%</span>
                             </div>
                         </div>
-                        <div class="asset-signal" id="mstrSignal">Loading...</div>
+                        <div class="asset-signal" id="mstrSignal" style="margin-top: 10px; line-height: 1.4;">Loading...</div>
                     </div>
 
                     <!-- ETH/BTC Ratio -->
@@ -1213,40 +1213,90 @@
             // Update fair value
             fairValueEl.textContent = `$${formatNumber(data.fair_value.toFixed(0))}`;
             
-            // Update status with color
-            let statusText = data.status.replace(/_/g, ' ');
-            statusText = statusText.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-            statusEl.textContent = statusText;
-            statusEl.style.color = data.color;
+            // Use new enhanced status and zone data if available
+            if (data.zone && data.action_hint) {
+                // Enhanced version with zones
+                statusEl.textContent = data.status;
+                statusEl.style.color = data.color;
+                statusEl.title = data.action_hint; // Show action hint on hover
+                
+                // Show zone signal if available
+                if (data.signal) {
+                    statusEl.textContent = `${data.status} ${data.signal}`;
+                }
+            } else {
+                // Fallback to old version
+                let statusText = data.status.replace(/_/g, ' ');
+                statusText = statusText.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+                statusEl.textContent = statusText;
+                statusEl.style.color = data.color;
+            }
             
-            // Update deviation with better formatting
+            // Update deviation with better formatting and cycle info
             const deviation = data.deviation_percent;
+            let deviationText = '';
+            
             if (Math.abs(deviation) < 5) {
-                deviationEl.textContent = `Near Fair Value (${deviation > 0 ? '+' : ''}${deviation.toFixed(1)}%)`;
+                deviationText = `Near Fair Value (${deviation > 0 ? '+' : ''}${deviation.toFixed(1)}%)`;
                 deviationEl.className = 'change neutral';
                 deviationEl.style.color = '#ffcc00';
             } else if (deviation > 0) {
-                deviationEl.textContent = `${deviation.toFixed(1)}% Above Fair Value`;
+                deviationText = `${deviation.toFixed(1)}% Above Fair Value`;
                 deviationEl.className = 'change negative';
                 deviationEl.style.color = '#ff6600';
             } else {
-                deviationEl.textContent = `${Math.abs(deviation).toFixed(1)}% Below Fair Value`;
+                deviationText = `${Math.abs(deviation).toFixed(1)}% Below Fair Value`;
                 deviationEl.className = 'change positive';
                 deviationEl.style.color = '#00ff88';
             }
             
-            // Update marker position (-50% to +50% scale for better visualization)
-            // Center is fair value (50%), edges are ±50% deviation
-            const clampedDeviation = Math.max(-50, Math.min(50, deviation));
-            const position = 50 + clampedDeviation; // Convert to 0-100 scale
-            markerEl.style.left = `${position}%`;
+            // Add cycle context if available
+            if (data.cycle_context && data.cycle_context.cycle_position) {
+                deviationText += ` | ${data.cycle_context.cycle_phase} (${data.cycle_context.cycle_position}%)`;
+            }
             
-            // Update tooltip
-            tooltipEl.textContent = `${deviation > 0 ? '+' : ''}${deviation.toFixed(1)}%`;
+            deviationEl.textContent = deviationText;
             
-            // Add support/resistance info to fair value element
-            if (data.support && data.resistance) {
+            // Update marker position using position_in_band if available
+            if (data.position_in_band !== undefined) {
+                // Use actual position in band (0-1 scale to 0-100%)
+                const position = data.position_in_band * 100;
+                markerEl.style.left = `${position}%`;
+            } else {
+                // Fallback to old calculation
+                const clampedDeviation = Math.max(-50, Math.min(50, deviation));
+                const position = 50 + clampedDeviation;
+                markerEl.style.left = `${position}%`;
+            }
+            
+            // Enhanced tooltip with zone info
+            if (data.zone) {
+                tooltipEl.textContent = `${data.zone.replace(/_/g, ' ')} (${deviation > 0 ? '+' : ''}${deviation.toFixed(1)}%)`;
+            } else {
+                tooltipEl.textContent = `${deviation > 0 ? '+' : ''}${deviation.toFixed(1)}%`;
+            }
+            
+            // Add support/resistance info with zones if available
+            if (data.zones) {
+                // Show key zone levels in title
+                fairValueEl.title = `Zones: Support $${formatNumber(data.support.toFixed(0))} | Fair $${formatNumber(data.fair_value.toFixed(0))} | Bubble $${formatNumber(data.zones.bubble.toFixed(0))} | Resistance $${formatNumber(data.resistance.toFixed(0))}`;
+            } else if (data.support && data.resistance) {
                 fairValueEl.title = `Support: $${formatNumber(data.support.toFixed(0))} | Resistance: $${formatNumber(data.resistance.toFixed(0))}`;
+            }
+            
+            // Add halving info if available
+            if (data.cycle_context && data.cycle_context.days_to_halving) {
+                const halvingInfo = document.createElement('div');
+                halvingInfo.style.fontSize = '0.8em';
+                halvingInfo.style.marginTop = '5px';
+                halvingInfo.style.opacity = '0.8';
+                halvingInfo.textContent = `Next halving: ${data.cycle_context.days_to_halving} days`;
+                
+                // Add to status element if not already there
+                if (!statusEl.querySelector('.halving-info')) {
+                    halvingInfo.className = 'halving-info';
+                    statusEl.appendChild(halvingInfo);
+                }
             }
         }
 
@@ -1527,53 +1577,124 @@
             ctx.stroke();
         }
 
+        // Fetch advanced MSTR analytics
+        async function fetchMSTRAdvanced() {
+            try {
+                const response = await fetch('/api/mstr-advanced');
+                const data = await response.json();
+                
+                // Check if there's an error
+                if (data.error) {
+                    console.error('MSTR API error:', data.error);
+                    return;
+                }
+                
+                // Data is returned directly in the response
+                const mstrData = data.analytics;
+                
+                // Update NAV Premium with percentile context
+                const mstrEl = document.getElementById('mstrPremium');
+                const premium = mstrData.nav.premium_percent;
+                const percentile = mstrData.premium_analysis.percentile;
+                
+                mstrEl.innerHTML = `
+                    <div>${premium > 0 ? '+' : ''}${premium.toFixed(1)}%</div>
+                    <div style="font-size: 0.7em; opacity: 0.8;">${percentile}th percentile</div>
+                `;
+                
+                // Color based on percentile
+                if (percentile > 80) {
+                    mstrEl.style.color = '#ff6600'; // High premium (top 20%)
+                } else if (percentile > 50) {
+                    mstrEl.style.color = '#ffcc00'; // Moderate
+                } else if (percentile > 20) {
+                    mstrEl.style.color = '#00ff88'; // Attractive
+                } else {
+                    mstrEl.style.color = '#00ffff'; // Deep discount (bottom 20%)
+                }
+                
+                // Update premium bar
+                const premiumBar = document.getElementById('mstrPremiumBar');
+                const premiumMarker = document.getElementById('mstrMarker');
+                if (premiumBar && premiumMarker) {
+                    const clampedPremium = Math.max(0, Math.min(100, premium));
+                    premiumBar.style.width = `${clampedPremium}%`;
+                    premiumMarker.style.left = `${clampedPremium}%`;
+                }
+                
+                // Update signal with trading recommendation
+                const mstrSignal = document.getElementById('mstrSignal');
+                const signals = data.trading_signals || [];
+                const topSignal = signals[0];
+                
+                // Show primary signal and recommendation
+                if (topSignal) {
+                    const signalIcon = topSignal.type === 'buy' ? '🟢' : topSignal.type === 'sell' ? '🔴' : '⚪';
+                    mstrSignal.innerHTML = `
+                        <div style="font-weight: bold; margin-bottom: 5px;">
+                            ${signalIcon} ${topSignal.strength.toUpperCase()} Signal (${(topSignal.confidence * 100).toFixed(0)}% confidence)
+                        </div>
+                        <div style="font-size: 0.9em; margin-bottom: 3px;">${topSignal.reason}</div>
+                        <div style="font-size: 0.85em; opacity: 0.9;">${topSignal.action}</div>
+                    `;
+                } else {
+                    mstrSignal.innerHTML = '<div>No clear signal</div>';
+                }
+                
+                // Color based on signal type
+                if (topSignal) {
+                    if (topSignal.type === 'buy') {
+                        mstrSignal.style.color = '#00ff88';
+                    } else if (topSignal.type === 'sell') {
+                        mstrSignal.style.color = '#ff6666';
+                    } else {
+                        mstrSignal.style.color = '#ffcc00';
+                    }
+                }
+                
+                // Add additional MSTR metrics section if not exists
+                let mstrMetrics = document.getElementById('mstrAdvancedMetrics');
+                if (!mstrMetrics) {
+                    const mstrCard = mstrSignal.closest('.asset-card');
+                    mstrMetrics = document.createElement('div');
+                    mstrMetrics.id = 'mstrAdvancedMetrics';
+                    mstrMetrics.style.cssText = 'margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85em;';
+                    mstrCard.appendChild(mstrMetrics);
+                }
+                
+                // Display key metrics
+                const arb = data.arbitrage_opportunities?.[0];
+                mstrMetrics.innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                        <div>Beta: ${(mstrData.beta?.beta || 2.0).toFixed(2)}</div>
+                        <div>Vol Ratio: ${(mstrData.beta?.volatility_ratio || 1.5).toFixed(2)}x</div>
+                        <div>Correlation: ${((mstrData.beta?.correlation || 0.85) * 100).toFixed(0)}%</div>
+                        <div>Holdings: ${(mstrData.btc_holdings / 1000).toFixed(1)}K BTC</div>
+                    </div>
+                    ${mstrData.bonds?.next_maturity ? `
+                        <div style="margin-top: 5px; padding: 5px; background: rgba(255,165,0,0.1); border-radius: 3px;">
+                            ⚠️ Bond Maturity: ${mstrData.bonds.next_maturity.date} ($${(mstrData.bonds.next_maturity.amount/1e6).toFixed(0)}M)
+                        </div>
+                    ` : ''}
+                    ${arb ? `
+                        <div style="margin-top: 5px; padding: 5px; background: rgba(0,255,136,0.1); border-radius: 3px;">
+                            💰 Arbitrage: ${arb.strategy} (${arb.expected_return})
+                        </div>
+                    ` : ''}
+                `;
+            } catch (error) {
+                console.error('Error fetching MSTR advanced data:', error);
+            }
+        }
+        
         // Fetch correlation data
         async function fetchCorrelationData() {
             try {
                 const response = await fetch('/api/correlation');
                 const data = await response.json();
                 
-                // MSTR Premium with enhanced display
-                if (data.mstr) {
-                    const premium = data.mstr.nav_premium || 
-                                   data.mstr.current_data?.nav_premium || 
-                                   data.mstr.avg_premium || 0;
-                    
-                    // Update value
-                    const mstrEl = document.getElementById('mstrPremium');
-                    mstrEl.textContent = `${premium > 0 ? '+' : ''}${premium.toFixed(1)}%`;
-                    
-                    // Update color based on premium level
-                    if (premium > 50) {
-                        mstrEl.style.color = '#ff6600'; // Orange for high premium
-                    } else if (premium > 30) {
-                        mstrEl.style.color = '#ffcc00'; // Yellow for moderate
-                    } else {
-                        mstrEl.style.color = '#00ff88'; // Green for low
-                    }
-                    
-                    // Update premium bar
-                    const premiumBar = document.getElementById('mstrPremiumBar');
-                    const premiumMarker = document.getElementById('mstrMarker');
-                    if (premiumBar && premiumMarker) {
-                        const clampedPremium = Math.max(0, Math.min(100, premium));
-                        premiumBar.style.width = `${clampedPremium}%`;
-                        premiumMarker.style.left = `${clampedPremium}%`;
-                    }
-                    
-                    // Update signal
-                    const mstrSignal = document.getElementById('mstrSignal');
-                    if (premium > 50) {
-                        mstrSignal.textContent = 'Overheated - Consider BTC';
-                        mstrSignal.style.color = '#ff6600';
-                    } else if (premium < 20) {
-                        mstrSignal.textContent = 'Discount - MSTR Attractive';
-                        mstrSignal.style.color = '#00ff88';
-                    } else {
-                        mstrSignal.textContent = 'Fair Premium';
-                        mstrSignal.style.color = '#ffcc00';
-                    }
-                }
+                // Fetch advanced MSTR analytics separately
+                fetchMSTRAdvanced();
                 
                 // ETH/BTC Ratio with trend
                 if (data.eth_btc) {
@@ -1797,6 +1918,104 @@
         }
 
         // Fetch on-chain analytics data
+        async function fetchNetworkHealthV2() {
+            try {
+                const response = await fetch('/api/network-health-v2');
+                const data = await response.json();
+                console.log('Network Health V2 data:', data);
+                
+                if (data && !data.error) {
+                    updateNetworkHealthV2(data);
+                }
+            } catch (error) {
+                console.error('Error fetching network health v2:', error);
+            }
+        }
+        
+        function updateNetworkHealthV2(data) {
+            const networkScore = document.getElementById('networkScore');
+            const networkStatus = document.getElementById('networkStatus');
+            const healthFill = document.getElementById('healthFill');
+            const networkStats = document.getElementById('networkStats');
+            const networkInsight = document.getElementById('networkInsight');
+            const networkBreakdown = document.getElementById('networkBreakdown');
+            
+            // Update score and status
+            if (networkScore) {
+                networkScore.textContent = `${data.total_score.toFixed(0)}/100`;
+            }
+            if (networkStatus) {
+                networkStatus.textContent = data.status;
+                networkStatus.style.color = data.color;
+            }
+            
+            // Update health bar
+            if (healthFill) {
+                healthFill.style.width = `${data.total_score}%`;
+                healthFill.style.backgroundColor = data.color;
+            }
+            
+            // Show current metrics
+            if (networkStats && data.metrics) {
+                const hashRate = (data.metrics.hash_rate / 1e18).toFixed(1);
+                const txCount = (data.metrics.transaction_count / 1000).toFixed(0);
+                const mempool = (data.metrics.mempool_size / 1000).toFixed(1);
+                const blockTime = data.metrics.minutes_between_blocks.toFixed(1);
+                networkStats.textContent = `Hash: ${hashRate} EH/s | Tx/day: ${txCount}K | Mempool: ${mempool}K | Block: ${blockTime}min`;
+            }
+            
+            // Show description
+            if (networkInsight) {
+                networkInsight.textContent = data.description;
+                networkInsight.style.color = data.color;
+            }
+            
+            // Show component breakdown with new structure
+            if (networkBreakdown && data.components) {
+                const comp = data.components;
+                let breakdownHTML = `
+                    <div style="font-size: 0.85em; line-height: 1.4;">
+                        <div style="margin-bottom: 8px;">
+                            <strong>🔒 Security (${comp.security.score.toFixed(1)}/${comp.security.max})</strong>
+                            <div style="margin-left: 20px; opacity: 0.9;">
+                                ${comp.security.insights ? comp.security.insights.slice(0, 2).join('<br>') : ''}
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong>💰 Economic (${comp.economic.score.toFixed(1)}/${comp.economic.max})</strong>
+                            <div style="margin-left: 20px; opacity: 0.9;">
+                                ${comp.economic.insights ? comp.economic.insights.slice(0, 2).join('<br>') : ''}
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong>⚡ Performance (${comp.performance.score.toFixed(1)}/${comp.performance.max})</strong>
+                            <div style="margin-left: 20px; opacity: 0.9;">
+                                ${comp.performance.insights ? comp.performance.insights.slice(0, 2).join('<br>') : ''}
+                            </div>
+                        </div>
+                        <div>
+                            <strong>🌐 Decentralization (${comp.decentralization.score.toFixed(1)}/${comp.decentralization.max})</strong>
+                            <div style="margin-left: 20px; opacity: 0.9;">
+                                ${comp.decentralization.insights ? comp.decentralization.insights.slice(0, 2).join('<br>') : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Add alerts if any
+                if (data.alerts && data.alerts.length > 0) {
+                    breakdownHTML += `
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2);">
+                            <strong>⚠️ Alerts:</strong>
+                            ${data.alerts.map(a => `<div style="margin-left: 20px; color: ${a.severity === 'high' ? '#ff6600' : '#ffcc00'};">${a.message}</div>`).join('')}
+                        </div>
+                    `;
+                }
+                
+                networkBreakdown.innerHTML = breakdownHTML;
+            }
+        }
+        
         async function fetchOnChainData() {
             try {
                 const response = await fetch('/api/onchain');
@@ -1896,7 +2115,9 @@
                     }
                 }
                 
-                // Update Network Health with detailed insights
+                // Network Health is now updated by fetchNetworkHealthV2()
+                // Commenting out old network_health update from onchain endpoint
+                /*
                 if (data.network_health) {
                     const networkScore = document.getElementById('networkScore');
                     const networkStatus = document.getElementById('networkStatus');
@@ -1959,6 +2180,7 @@
                         networkBreakdown.innerHTML = breakdownHTML;
                     }
                 }
+                */
                 
             } catch (error) {
                 console.error('Error fetching on-chain data:', error);
@@ -1978,16 +2200,20 @@
             fetchCorrelationData();
             fetchWhaleData();
             fetchOnChainData();
+            fetchNetworkHealthV2();  // Fetch new network health data
+            fetchMSTRAdvanced();  // Fetch MSTR advanced analytics
             
             // Update correlation and whale data every 30 seconds
             updateInterval = setInterval(() => {
                 fetchCorrelationData();
                 fetchWhaleData();
+                fetchMSTRAdvanced();  // Update MSTR analytics too
             }, 30000);
             
             // Update on-chain data every 5 minutes (less frequent as it changes slowly)
             setInterval(() => {
                 fetchOnChainData();
+                fetchNetworkHealthV2();  // Update network health too
             }, 300000);
         });
 

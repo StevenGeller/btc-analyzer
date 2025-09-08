@@ -100,6 +100,42 @@ class Database:
                 )
             """)
             
+            # MSTR price history for beta calculations
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS mstr_prices (
+                    timestamp INTEGER PRIMARY KEY,
+                    price REAL NOT NULL,
+                    volume REAL,
+                    market_cap REAL,
+                    nav_premium REAL,
+                    source TEXT DEFAULT 'yahoo'
+                )
+            """)
+            
+            # Network metrics table for percentile-based health scoring
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS network_metrics (
+                    timestamp INTEGER PRIMARY KEY,
+                    hash_rate REAL,
+                    hash_rate_eh REAL,  -- In ExaHash/s for easier reading
+                    difficulty REAL,
+                    daily_transactions INTEGER,
+                    mempool_size INTEGER,
+                    minutes_between_blocks REAL,
+                    total_fees_btc REAL,
+                    node_count INTEGER,
+                    lightning_capacity_btc REAL,
+                    lightning_channels INTEGER,
+                    mining_herfindahl_index REAL,
+                    top_4_pool_concentration REAL,
+                    largest_pool_share REAL,
+                    block_height INTEGER,
+                    average_block_size INTEGER,
+                    median_fee_sat_byte REAL,
+                    data_source TEXT DEFAULT 'mixed'
+                )
+            """)
+            
             # Real-time trade data for granular analysis
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS realtime_trades (

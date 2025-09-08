@@ -16,6 +16,10 @@ from monitoring import get_monitor
 from backup_manager import get_backup_manager, start_backup_service
 from power_law_calculator import get_power_law_calculator
 from real_onchain_data import get_real_onchain_data
+from network_health_v2 import get_network_health_v2
+from mstr_advanced_analytics import get_mstr_advanced_analytics
+from mstr_holdings_fetcher import get_fetcher
+from mstr_stock_fetcher import get_stock_fetcher
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -256,6 +260,12 @@ async def startup_event():
     initial_task = asyncio.create_task(working_analyzer.strategy_fetcher.get_mstr_data())
     background_tasks.add(initial_task)
     
+    # Start MSTR holdings fetcher with 30-minute updates
+    holdings_fetcher = get_fetcher()
+    holdings_task = asyncio.create_task(holdings_fetcher.start_periodic_updates())
+    background_tasks.add(holdings_task)
+    logger.info("Started MSTR holdings fetcher (30-minute updates)")
+    
     # Start automated backup system
     backup_task = asyncio.create_task(start_backup_service())
     background_tasks.add(backup_task)
@@ -467,6 +477,41 @@ async def get_multi_asset_data():
     """Alternative endpoint for multi-asset data"""
     return await get_correlation_data()
 
+@app.get("/api/mstr-advanced")
+async def get_mstr_advanced():
+    """Get advanced MSTR analytics with trading signals"""
+    try:
+        # Get current prices
+        manager = await working_analyzer.get_multi_asset_manager()
+        await manager.update_all_data()
+        
+        # Get comprehensive analysis which includes MSTR data
+        correlation_data = await manager.get_comprehensive_analysis()
+        
+        # Get real MSTR stock price
+        stock_fetcher = get_stock_fetcher()
+        mstr_price = await stock_fetcher.get_mstr_price()
+        
+        # Get Bitcoin price
+        btc_data = await working_analyzer.get_real_bitcoin_data()
+        btc_price = btc_data.get('current_data', {}).get('price', 100000)
+        
+        # Get advanced analytics
+        analytics = await get_mstr_advanced_analytics()
+        result = await analytics.get_comprehensive_analysis(mstr_price, btc_price)
+        
+        return JSONResponse(content=result)
+        
+    except Exception as e:
+        logger.error(f"MSTR advanced analytics error: {e}")
+        return JSONResponse(
+            content={
+                "error": "MSTR analytics failed",
+                "message": str(e)
+            },
+            status_code=500
+        )
+
 @app.get("/api/power-law")
 async def get_power_law():
     """Get Bitcoin Power Law analysis"""
@@ -542,6 +587,29 @@ async def health_check():
                 "status": "error",
                 "error": str(e),
                 "timestamp": int(time.time())
+            },
+            status_code=500
+        )
+
+@app.get("/api/network-health-v2")
+async def get_network_health_enhanced():
+    """Get enhanced network health with percentile-based scoring"""
+    try:
+        health_monitor = await get_network_health_v2(working_analyzer.db)
+        health_data = await health_monitor.calculate_health_score()
+        return JSONResponse(content=health_data)
+    except Exception as e:
+        logger.error(f"Network health v2 error: {e}")
+        return JSONResponse(
+            content={
+                "error": "Network health analysis failed",
+                "message": str(e),
+                "fallback": {
+                    "total_score": 50,
+                    "status": "UNKNOWN",
+                    "color": "#888888",
+                    "description": "Unable to calculate network health"
+                }
             },
             status_code=500
         )
